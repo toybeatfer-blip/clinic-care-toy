@@ -11,6 +11,7 @@ import {
   MasterBillingSettings,
   PetShopProduct,
   PetShopSaleReceipt,
+  ClinicSettings,
 } from '../types';
 
 export const INITIAL_PETS: Pet[] = [

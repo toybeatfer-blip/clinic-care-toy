@@ -702,7 +702,6 @@ export const VeterinaryProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       // 1. Initialize clinic settings with BLANK doctor, contact and prescription data
       const newSettings: ClinicSettings = {
         name: data.clinicName.trim(),
-        clinicName: data.clinicName.trim(),
         slogan: '',
         address: data.city ? `${data.city.trim()}, México` : '',
         phone: '',
@@ -740,11 +739,11 @@ export const VeterinaryProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setActiveShift(null);
 
       localStorage.setItem(LOCAL_STORAGE_KEYS.PETS, JSON.stringify([]));
-      localStorage.setItem(LOCAL_STORAGE_KEYS.MEDICAL_RECORDS, JSON.stringify([]));
+      localStorage.setItem(LOCAL_STORAGE_KEYS.RECORDS, JSON.stringify([]));
       localStorage.setItem(LOCAL_STORAGE_KEYS.VACCINES, JSON.stringify([]));
       localStorage.setItem(LOCAL_STORAGE_KEYS.APPOINTMENTS, JSON.stringify([]));
       localStorage.setItem(LOCAL_STORAGE_KEYS.INVENTORY, JSON.stringify([]));
-      localStorage.setItem(LOCAL_STORAGE_KEYS.STOCK_MOVEMENTS, JSON.stringify([]));
+      localStorage.setItem(LOCAL_STORAGE_KEYS.MOVEMENTS, JSON.stringify([]));
       localStorage.setItem(LOCAL_STORAGE_KEYS.REMINDERS, JSON.stringify([]));
       localStorage.setItem('vetcare_petshop_products_v1', JSON.stringify([]));
       localStorage.setItem('vetcare_petshop_sales_v1', JSON.stringify([]));

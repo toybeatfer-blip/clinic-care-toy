@@ -45,6 +45,7 @@ export const AndroidTutorApp: React.FC = () => {
     vaccines,
     medicalRecords,
     appointments,
+    clinicSettings,
     setViewMode,
     showToast,
   } = useVeterinary();

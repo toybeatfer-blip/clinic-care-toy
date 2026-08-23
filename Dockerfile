@@ -12,6 +12,9 @@ RUN npm install
 # Copy application source files
 COPY . .
 
+# Increase memory limit for Vite compilation on cloud builders
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
 # Build client bundle
 RUN npm run build
 
