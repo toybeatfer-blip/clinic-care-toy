@@ -40,7 +40,7 @@ export interface VitalSigns {
   taPediatricaBadge: string; // 'PEDIÁTRICO' | 'INFANTE' | 'MENOR' | ''
   fc: string; // ej. 75
   fr: string; // ej. 18
-  satO2: string; // ej. 98 (% de saturación de oxígeno)
+  satO2: string; // ej. 98 (% saturación de oxígeno)
   peso: string; // ej. 70.5
   talla: string; // ej. 1.70 (metros con punto decimal)
   imc: string; // calculado
@@ -129,6 +129,39 @@ export interface DoctorSettings {
   logoUrl: string; // base64 or URL
   // Theme
   primaryColor: 'sky' | 'emerald' | 'blue' | 'indigo' | 'purple' | 'teal' | 'rose';
+}
+
+export type LicenseStatus = 'active' | 'suspended' | 'expired';
+
+export interface ClinicAccount {
+  id: string;
+  clinicName: string;
+  username: string; // único
+  passwordPlain: string; // clave del consultorio
+  doctorName: string;
+  prefix: 'Dr.' | 'Dra.' | 'Médico';
+  cedulaGeneral: string;
+  cedulaEspecialidad?: string;
+  especialidad: string;
+  universidad: string;
+  telefono: string;
+  correo: string;
+  direccion: string;
+  sucursal: string;
+  logoUrl?: string;
+  primaryColor: 'sky' | 'emerald' | 'blue' | 'indigo' | 'purple' | 'teal' | 'rose';
+  createdAt: string;
+  lastLoginAt: string;
+  licenseStatus: LicenseStatus;
+  licenseValidUntil: string; // "Indefinida" o fecha YYYY-MM-DD
+  notes?: string;
+}
+
+export interface SessionUser {
+  type: 'superadmin' | 'clinic';
+  clinicId?: string;
+  username: string;
+  clinicAccount?: ClinicAccount;
 }
 
 export interface Cie10Item {

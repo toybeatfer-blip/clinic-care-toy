@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { X, Search, Trash2, FolderOpen, Download, Upload, Clock, User, Calendar, FileText, Check } from 'lucide-react';
 import { ClinicalRecord } from '../types';
-import { deleteRecordFromStorage } from '../utils/storage';
 
 interface SavedRecordsDrawerProps {
   isOpen: boolean;
@@ -24,7 +23,7 @@ export const SavedRecordsDrawer: React.FC<SavedRecordsDrawerProps> = ({
 
   const filtered = savedRecords.filter(r => {
     const name = `${r.identification.nombres} ${r.identification.apellidoPaterno} ${r.identification.apellidoMaterno}`.toLowerCase();
-    const dx = r.historyCheckup.diagnosticoCie10.toLowerCase();
+    const dx = (r.historyCheckup?.diagnosticoCie10 || '').toLowerCase();
     const folio = (r.ticketFolio || '').toLowerCase();
     const s = searchTerm.toLowerCase();
     return name.includes(s) || dx.includes(s) || folio.includes(s);
@@ -32,8 +31,8 @@ export const SavedRecordsDrawer: React.FC<SavedRecordsDrawerProps> = ({
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (window.confirm('¿Seguro que deseas eliminar este registro local?')) {
-      const next = deleteRecordFromStorage(id);
+    if (window.confirm('¿Seguro que deseas eliminar este registro de paciente?')) {
+      const next = savedRecords.filter(r => r.id !== id);
       onRefreshRecords(next);
     }
   };
@@ -42,7 +41,7 @@ export const SavedRecordsDrawer: React.FC<SavedRecordsDrawerProps> = ({
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(savedRecords, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `consultas_sac_respaldo_${new Date().toISOString().slice(0,10)}.json`);
+    downloadAnchor.setAttribute("download", `consultas_consultorio_${new Date().toISOString().slice(0,10)}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
@@ -56,9 +55,8 @@ export const SavedRecordsDrawer: React.FC<SavedRecordsDrawerProps> = ({
         try {
           const parsed = JSON.parse(event.target?.result as string);
           if (Array.isArray(parsed)) {
-            localStorage.setItem('clinic_care_toy_records_v1', JSON.stringify(parsed));
             onRefreshRecords(parsed);
-            alert('¡Expedientes importados con éxito!');
+            alert('¡Expedientes importados con éxito a este consultorio!');
           }
         } catch (err) {
           alert('Error al leer el archivo JSON');
@@ -75,7 +73,7 @@ export const SavedRecordsDrawer: React.FC<SavedRecordsDrawerProps> = ({
           <div className="flex items-center gap-2">
             <FolderOpen className="w-5 h-5 text-sky-600" />
             <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">
-              Historial de Consultas Locales
+              Historial de Pacientes del Consultorio
             </h2>
           </div>
           <button
@@ -159,7 +157,7 @@ export const SavedRecordsDrawer: React.FC<SavedRecordsDrawerProps> = ({
                   </div>
 
                   <p className="text-[11px] font-medium text-sky-700 dark:text-sky-400 truncate mb-1">
-                    {record.historyCheckup.diagnosticoCie10 || 'Sin diagnóstico registrado'}
+                    {record.historyCheckup?.diagnosticoCie10 || 'Sin diagnóstico registrado'}
                   </p>
 
                   <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-100 dark:border-slate-800">
@@ -178,7 +176,7 @@ export const SavedRecordsDrawer: React.FC<SavedRecordsDrawerProps> = ({
             })
           ) : (
             <div className="p-8 text-center text-xs text-slate-400">
-              No hay consultas guardadas que coincidan con la búsqueda.
+              No hay pacientes guardados en este consultorio.
             </div>
           )}
         </div>

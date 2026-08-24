@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { ClinicalRecord, DoctorSettings } from './types';
+import { ClinicalRecord, DoctorSettings, SessionUser } from './types';
 import {
-  loadActiveRecord,
-  saveRecordToStorage,
-  loadSavedRecords,
-  getInitialRecord,
-  loadDoctorSettings,
-  saveDoctorSettings
-} from './utils/storage';
+  getCurrentSession,
+  clearSession,
+  getClinicRecords,
+  saveClinicRecord,
+  getClinicSettings,
+  saveClinicSettings,
+  getActiveClinicRecord,
+  getBlankClinicalRecord
+} from './utils/authStorage';
+import { AuthScreen } from './components/AuthScreen';
+import { SuperAdminDashboard } from './components/SuperAdminDashboard';
 import { Header } from './components/Header';
 import { AuditAlertsBanner } from './components/AuditAlertsBanner';
 import { Module1Identification } from './components/Module1Identification';
@@ -28,16 +32,37 @@ import {
   Sun,
   BookOpen,
   Sparkles,
-  Settings
+  Settings,
+  LogOut
 } from 'lucide-react';
 import { CopyButton } from './components/CopyButton';
 import { generateModule1Text, generateModule2Text, generateModule3Text, generateModule4Text } from './utils/nom004Validator';
 
 export const App: React.FC = () => {
-  const [record, setRecord] = useState<ClinicalRecord>(loadActiveRecord());
-  const [savedRecords, setSavedRecords] = useState<ClinicalRecord[]>(loadSavedRecords());
-  const [doctorSettings, setDoctorSettings] = useState<DoctorSettings>(loadDoctorSettings());
-  const [activeTab, setActiveTab] = useState<'modulo1' | 'modulo2' | 'modulo3' | 'modulo4'>('modulo2');
+  const [session, setSession] = useState<SessionUser | null>(getCurrentSession());
+  
+  // Per-clinic isolated state
+  const clinicId = session?.clinicId || '';
+  const [record, setRecord] = useState<ClinicalRecord>(clinicId ? getActiveClinicRecord(clinicId) : getBlankClinicalRecord());
+  const [savedRecords, setSavedRecords] = useState<ClinicalRecord[]>(clinicId ? getClinicRecords(clinicId) : []);
+  const [doctorSettings, setDoctorSettings] = useState<DoctorSettings>(clinicId ? getClinicSettings(clinicId) : {
+    doctorName: '',
+    prefix: 'Dr.',
+    cedulaGeneral: '',
+    cedulaEspecialidad: '',
+    especialidad: 'Medicina General',
+    universidad: '',
+    telefonoContacto: '',
+    correoContacto: '',
+    nombreClinica: '',
+    sucursal: '',
+    direccionClinica: '',
+    telefonoClinica: '',
+    logoUrl: '',
+    primaryColor: 'sky'
+  });
+
+  const [activeTab, setActiveTab] = useState<'modulo1' | 'modulo2' | 'modulo3' | 'modulo4'>('modulo1');
 
   // Modals & Drawers
   const [isOpGuideOpen, setIsOpGuideOpen] = useState(false);
@@ -48,12 +73,39 @@ export const App: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [lastSavedTime, setLastSavedTime] = useState<string>('Guardado automáticamente');
 
-  // Sync clinical record to localStorage
+  // When session changes (login)
+  const handleLoginSuccess = (newSession: SessionUser) => {
+    setSession(newSession);
+    if (newSession.type === 'clinic' && newSession.clinicId) {
+      const cId = newSession.clinicId;
+      setSavedRecords(getClinicRecords(cId));
+      setDoctorSettings(getClinicSettings(cId));
+      setRecord(getActiveClinicRecord(cId));
+      setActiveTab('modulo1');
+    }
+  };
+
+  // Logout handler
+  const handleLogout = () => {
+    if (session?.type === 'clinic' && session.clinicId) {
+      // Guardar el registro activo actual antes de salir
+      saveClinicRecord(session.clinicId, record);
+      saveClinicSettings(session.clinicId, doctorSettings);
+    }
+    clearSession();
+    setSession(null);
+    setRecord(getBlankClinicalRecord());
+    setSavedRecords([]);
+  };
+
+  // Sync clinic record to isolated localStorage
   useEffect(() => {
-    const updatedList = saveRecordToStorage(record);
-    setSavedRecords(updatedList);
-    setLastSavedTime('Guardado a las ' + new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
-  }, [record]);
+    if (session?.type === 'clinic' && session.clinicId) {
+      const updatedList = saveClinicRecord(session.clinicId, record);
+      setSavedRecords(updatedList);
+      setLastSavedTime('Guardado a las ' + new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    }
+  }, [record, session]);
 
   // Dark Mode toggle
   useEffect(() => {
@@ -65,16 +117,18 @@ export const App: React.FC = () => {
   }, [isDarkMode]);
 
   const handleNewPatient = () => {
-    if (window.confirm('¿Deseas iniciar un nuevo expediente en blanco? El actual quedará guardado en tu historial.')) {
-      const fresh = getInitialRecord();
-      setRecord(fresh);
+    if (window.confirm('¿Deseas registrar un nuevo paciente en blanco? El expediente actual se mantendrá guardado en tu historial.')) {
+      const blank = getBlankClinicalRecord();
+      setRecord(blank);
       setActiveTab('modulo1');
     }
   };
 
   const handleSaveSettings = (updated: DoctorSettings) => {
     setDoctorSettings(updated);
-    saveDoctorSettings(updated);
+    if (session?.type === 'clinic' && session.clinicId) {
+      saveClinicSettings(session.clinicId, updated);
+    }
   };
 
   const getCurrentModuleCopyText = () => {
@@ -86,6 +140,17 @@ export const App: React.FC = () => {
     }
   };
 
+  // 1. Si no hay sesión -> Pantalla de Inicio de Sesión / Registro
+  if (!session) {
+    return <AuthScreen onLoginSuccess={handleLoginSuccess} />;
+  }
+
+  // 2. Si es Super Administrador (Fernando01) -> Panel de Control Maestro
+  if (session.type === 'superadmin') {
+    return <SuperAdminDashboard onLogout={handleLogout} />;
+  }
+
+  // 3. Si es un Consultorio Médico -> Espacio de Trabajo Clínico Aislado
   return (
     <div className="min-h-screen flex flex-col bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans selection:bg-sky-500 selection:text-white transition-colors duration-150">
       
@@ -99,7 +164,9 @@ export const App: React.FC = () => {
         onOpenPrintPreview={() => setIsPrintModalOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onNewPatient={handleNewPatient}
+        onLogout={handleLogout}
         doctorSettings={doctorSettings}
+        session={session}
       />
 
       {/* Main Workspace Area */}
@@ -225,7 +292,7 @@ export const App: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>CLINIC CARE TOY | Sistema Copiloto para SAC</span>
+            <span>{doctorSettings.nombreClinica || session.clinicAccount?.clinicName || 'CLINIC CARE TOY'}</span>
             <span className="text-slate-300 dark:text-slate-700">|</span>
             <span className="font-mono text-[11px]">{lastSavedTime}</span>
           </div>
@@ -237,7 +304,7 @@ export const App: React.FC = () => {
               className="hover:text-sky-600 transition-colors flex items-center gap-1"
             >
               <Settings className="w-3.5 h-3.5" />
-              <span>Configuración Médico / Logo</span>
+              <span>Configuración</span>
             </button>
             <span>•</span>
             <button
@@ -258,7 +325,14 @@ export const App: React.FC = () => {
               <span>Dictado Libre</span>
             </button>
             <span>•</span>
-            <span>NOM-004-SSA3-2012</span>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="text-rose-600 hover:text-rose-700 font-bold transition-colors flex items-center gap-1"
+            >
+              <LogOut className="w-3 h-3" />
+              <span>Cerrar Sesión</span>
+            </button>
           </div>
         </div>
       </footer>

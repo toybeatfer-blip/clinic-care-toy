@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Stethoscope, Clock, BookOpen, Sparkles, FolderOpen, UserPlus, Printer, Settings, Ticket } from 'lucide-react';
+import { Stethoscope, Clock, BookOpen, Sparkles, FolderOpen, UserPlus, Printer, Settings, Ticket, LogOut, ShieldCheck, Building2 } from 'lucide-react';
 import { CopyButton } from './CopyButton';
-import { DoctorSettings } from '../types';
+import { DoctorSettings, SessionUser } from '../types';
 
 interface HeaderProps {
   ticketFolio: string;
@@ -12,7 +12,9 @@ interface HeaderProps {
   onOpenPrintPreview: () => void;
   onOpenSettings: () => void;
   onNewPatient: () => void;
+  onLogout: () => void;
   doctorSettings: DoctorSettings;
+  session: SessionUser;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -24,7 +26,9 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenPrintPreview,
   onOpenSettings,
   onNewPatient,
-  doctorSettings
+  onLogout,
+  doctorSettings,
+  session
 }) => {
   const [time, setTime] = useState<string>('');
 
@@ -38,16 +42,19 @@ export const Header: React.FC<HeaderProps> = ({
     return () => clearInterval(interval);
   }, []);
 
+  const clinicName = session.clinicAccount?.clinicName || doctorSettings.nombreClinica || 'Consultorio Médico';
+  const doctorDisplayName = doctorSettings.doctorName ? `${doctorSettings.prefix} ${doctorSettings.doctorName}` : (session.clinicAccount ? `${session.clinicAccount.prefix} ${session.clinicAccount.doctorName}` : 'Médico en Turno');
+
   return (
     <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between py-3 gap-3">
           
-          {/* Logo and System Identity */}
+          {/* Logo and Clinic Identity */}
           <div className="flex items-center gap-3">
             {doctorSettings.logoUrl ? (
               <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 p-1 border border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden shadow-sm">
-                <img src={doctorSettings.logoUrl} alt="Logo Clínico" className="max-w-full max-h-full object-contain" />
+                <img src={doctorSettings.logoUrl} alt="Logo" className="max-w-full max-h-full object-contain" />
               </div>
             ) : (
               <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-sky-500/20">
@@ -57,20 +64,21 @@ export const Header: React.FC<HeaderProps> = ({
 
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="font-extrabold text-base sm:text-lg tracking-tight bg-gradient-to-r from-sky-700 to-indigo-800 dark:from-sky-400 dark:to-indigo-300 bg-clip-text text-transparent">
-                  CLINIC CARE TOY
+                <h1 className="font-extrabold text-base sm:text-lg tracking-tight text-slate-800 dark:text-slate-100">
+                  {clinicName}
                 </h1>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
-                  SAC & NOM-004
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
+                  <ShieldCheck className="w-3 h-3" />
+                  <span>Licencia Activa</span>
                 </span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-xs sm:max-w-sm">
-                {doctorSettings.prefix} {doctorSettings.doctorName} • {doctorSettings.sucursal || doctorSettings.nombreClinica}
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-xs sm:max-w-md">
+                {doctorDisplayName} {session.clinicAccount?.sucursal && `• ${session.clinicAccount.sucursal}`} (Usuario: {session.username})
               </p>
             </div>
           </div>
 
-          {/* Ticket Folio and Operational Tools Bar */}
+          {/* Ticket Folio and Action Bar */}
           <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
             {/* Ticket Folio Input */}
             <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700">
@@ -129,13 +137,12 @@ export const Header: React.FC<HeaderProps> = ({
               type="button"
               onClick={onOpenSavedDrawer}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors"
-              title="Historial de consultas y pacientes"
+              title="Historial de consultas de este consultorio"
             >
               <FolderOpen className="w-3.5 h-3.5 text-slate-600" />
               <span className="hidden lg:inline">Historial</span>
             </button>
 
-            {/* Configurar Médico, Dirección, Logo y Colores */}
             <button
               type="button"
               onClick={onOpenSettings}
@@ -143,17 +150,28 @@ export const Header: React.FC<HeaderProps> = ({
               title="Configurar datos del médico, consultorio, logo y colores"
             >
               <Settings className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
-              <span>Configuración</span>
+              <span className="hidden sm:inline">Configuración</span>
             </button>
 
             <button
               type="button"
               onClick={onNewPatient}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-all active:scale-95"
-              title="Iniciar nuevo expediente en blanco"
+              title="Iniciar nuevo paciente en blanco"
             >
               <UserPlus className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Nuevo Paciente</span>
+            </button>
+
+            {/* Red Logout Button */}
+            <button
+              type="button"
+              onClick={onLogout}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md shadow-rose-600/20 transition-all active:scale-95 ml-1"
+              title="Cerrar sesión del consultorio y guardar datos"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Cerrar Sesión</span>
             </button>
           </div>
 
