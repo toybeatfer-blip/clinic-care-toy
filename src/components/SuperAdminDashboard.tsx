@@ -1,7 +1,37 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Building2, User, KeyRound, CheckCircle2, XCircle, Trash2, Edit3, Power, Download, Upload, Search, Users, AlertTriangle, LogOut, Clock, Calendar, ShieldAlert } from 'lucide-react';
-import { ClinicAccount } from '../types';
-import { getAllClinics, setClinicLicense, deleteClinic, saveAllClinics, getClinicRecords } from '../utils/authStorage';
+import {
+  ShieldCheck,
+  Building2,
+  User,
+  KeyRound,
+  CheckCircle2,
+  XCircle,
+  Trash2,
+  Edit3,
+  Power,
+  Download,
+  Search,
+  Users,
+  LogOut,
+  CalendarPlus,
+  PhoneCall,
+  UserCog,
+  Clock,
+  Calendar,
+  AlertCircle
+} from 'lucide-react';
+import { ClinicAccount, AdminContactInfo } from '../types';
+import {
+  getAllClinics,
+  setClinicLicense,
+  deleteClinic,
+  saveAllClinics,
+  getClinicRecords,
+  renewClinicLicense,
+  getDaysRemaining,
+  getAdminContactInfo
+} from '../utils/authStorage';
+import { AdminContactModal } from './AdminContactModal';
 
 interface SuperAdminDashboardProps {
   onLogout: () => void;
@@ -12,6 +42,8 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
   const [searchTerm, setSearchTerm] = useState('');
   const [editingClinic, setEditingClinic] = useState<ClinicAccount | null>(null);
   const [showPasswordMap, setShowPasswordMap] = useState<{ [id: string]: boolean }>({});
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+  const [adminContact, setAdminContact] = useState<AdminContactInfo>(getAdminContactInfo());
 
   const toggleShowPassword = (id: string) => {
     setShowPasswordMap(prev => ({
@@ -23,6 +55,11 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
   const handleToggleLicense = (clinic: ClinicAccount) => {
     const newStatus = clinic.licenseStatus === 'active' ? 'suspended' : 'active';
     const updated = setClinicLicense(clinic.id, newStatus);
+    setClinics(updated);
+  };
+
+  const handleRenew1Month = (clinic: ClinicAccount) => {
+    const updated = renewClinicLicense(clinic.id, 30);
     setClinics(updated);
   };
 
@@ -48,6 +85,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
     const masterData = {
       exportedAt: new Date().toISOString(),
       superAdmin: 'Fernando01',
+      adminContact,
       totalClinics: all.length,
       clinics: all.map(c => ({
         ...c,
@@ -83,7 +121,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
       
       {/* Super Admin Top Header */}
       <header className="bg-slate-950 border-b border-slate-800 sticky top-0 z-30 shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-rose-600 flex items-center justify-center text-white shadow-md shadow-rose-500/20">
               <ShieldCheck className="w-6 h-6" />
@@ -98,20 +136,31 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                Gestión central de consultorios, licencias y bases de datos independientes
+                Licencias mensuales (1 mes por defecto) y datos de contacto para reactivaciones
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Button to configure Administrator Contact Information */}
+            <button
+              type="button"
+              onClick={() => setIsContactModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold transition-all shadow-sm"
+              title="Configurar mis datos de contacto (WhatsApp / Tel / Correo) para consultorios suspendidos"
+            >
+              <UserCog className="w-3.5 h-3.5 text-amber-400" />
+              <span>Mis Datos de Contacto</span>
+            </button>
+
             <button
               type="button"
               onClick={handleExportMasterBackup}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-colors shadow-sm"
+              className="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-colors shadow-sm"
               title="Descargar respaldo maestro completo de todos los consultorios"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>Respaldo Maestro JSON</span>
+              <span>Respaldo JSON</span>
             </button>
 
             {/* Red Logout Button */}
@@ -130,6 +179,29 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
       {/* Main Container */}
       <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-1">
         
+        {/* Admin Contact Info Summary Banner */}
+        <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 p-4 rounded-2xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              <PhoneCall className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-xs text-slate-400 block font-medium">Tus datos activos de contacto para consultorios:</span>
+              <span className="text-sm font-bold text-white">
+                {adminContact.adminName} • WhatsApp: <strong className="text-emerald-400 font-mono">{adminContact.phoneWhatsApp}</strong> • Correo: <strong className="text-sky-400 font-mono">{adminContact.email}</strong>
+              </span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsContactModalOpen(true)}
+            className="text-xs font-bold text-amber-400 hover:underline shrink-0"
+          >
+            Editar datos de contacto &rarr;
+          </button>
+        </div>
+
         {/* KPI Stats Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 space-y-1">
@@ -159,7 +231,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
           <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700/80 space-y-1">
             <span className="text-xs text-slate-400 font-medium flex items-center gap-1.5">
               <Users className="w-4 h-4 text-indigo-400" />
-              <span>Total Pacientes Registrados</span>
+              <span>Pacientes Registrados</span>
             </span>
             <div className="text-2xl sm:text-3xl font-black text-indigo-400">{totalPatients}</div>
           </div>
@@ -179,7 +251,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
           </div>
 
           <div className="text-xs text-slate-400 font-medium">
-            Mostrando {filteredClinics.length} de {clinics.length} consultorios
+            Mostrando {filteredClinics.length} de {clinics.length} consultorios (Licencias con ciclo de 1 mes)
           </div>
         </div>
 
@@ -191,10 +263,10 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
                 <tr>
                   <th className="py-3 px-4">Consultorio / Médico</th>
                   <th className="py-3 px-4">Usuario & Contraseña</th>
-                  <th className="py-3 px-4">Cédula & Especialidad</th>
                   <th className="py-3 px-4">Pacientes</th>
-                  <th className="py-3 px-4">Estado Licencia</th>
-                  <th className="py-3 px-4 text-right">Acciones de Control</th>
+                  <th className="py-3 px-4">Vigencia Mensual (1 Mes)</th>
+                  <th className="py-3 px-4">Estado</th>
+                  <th className="py-3 px-4 text-right">Acciones de Licencia & Control</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/60 font-medium">
@@ -202,7 +274,8 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
                   filteredClinics.map((clinic) => {
                     const patientCount = getClinicRecords(clinic.id).length;
                     const isShowingPass = showPasswordMap[clinic.id];
-                    const isSuspended = clinic.licenseStatus !== 'active';
+                    const remaining = getDaysRemaining(clinic.licenseValidUntil);
+                    const isSuspended = clinic.licenseStatus !== 'active' || remaining.isExpired;
 
                     return (
                       <tr key={clinic.id} className="hover:bg-slate-700/40 transition-colors">
@@ -211,7 +284,9 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
                           <div className="text-sky-300 text-xs">
                             {clinic.prefix} {clinic.doctorName} {clinic.sucursal && `• ${clinic.sucursal}`}
                           </div>
-                          <div className="text-[10px] text-slate-400 mt-0.5">{clinic.direccion || 'Sin dirección registrada'}</div>
+                          <div className="text-[10px] text-slate-400 mt-0.5">
+                            Cédula: {clinic.cedulaGeneral} • {clinic.direccion || 'Sin dirección'}
+                          </div>
                         </td>
 
                         <td className="py-3.5 px-4">
@@ -231,16 +306,29 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
                         </td>
 
                         <td className="py-3.5 px-4">
-                          <div className="text-slate-200">Céd: {clinic.cedulaGeneral}</div>
-                          <div className="text-[10px] text-slate-400">{clinic.especialidad}</div>
-                          {clinic.universidad && <div className="text-[10px] text-slate-500 truncate max-w-xs">{clinic.universidad}</div>}
-                        </td>
-
-                        <td className="py-3.5 px-4">
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 font-mono font-bold">
                             <Users className="w-3 h-3 text-sky-400" />
                             <span>{patientCount}</span>
                           </span>
+                        </td>
+
+                        {/* 1 Month Validity and Countdown */}
+                        <td className="py-3.5 px-4">
+                          <div className="font-mono text-xs text-slate-200 font-bold">
+                            {clinic.licenseValidUntil || 'No asignada'}
+                          </div>
+                          <div className="mt-1">
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${
+                              remaining.isExpired
+                                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                                : (remaining.days <= 5
+                                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                  : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30')
+                            }`}>
+                              <Clock className="w-3 h-3" />
+                              <span>{remaining.label}</span>
+                            </span>
+                          </div>
                         </td>
 
                         <td className="py-3.5 px-4">
@@ -250,26 +338,36 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
                               : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
                           }`}>
                             {!isSuspended ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                            <span>{!isSuspended ? 'Licencia Vigente' : 'Suspendido / Desactivado'}</span>
+                            <span>{!isSuspended ? 'Vigente' : (clinic.licenseStatus === 'suspended' ? 'Suspendida' : 'Vencida')}</span>
                           </span>
-                          <div className="text-[10px] text-slate-400 mt-1">Vence: {clinic.licenseValidUntil || 'Indefinida'}</div>
                         </td>
 
                         <td className="py-3.5 px-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            {/* Toggle License */}
+                          <div className="flex items-center justify-end gap-1.5">
+                            
+                            {/* +1 Mes Renewal Button */}
+                            <button
+                              type="button"
+                              onClick={() => handleRenew1Month(clinic)}
+                              className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 shadow-sm transition-all active:scale-95"
+                              title="Extender la vigencia 1 mes adicional (+30 días)"
+                            >
+                              <CalendarPlus className="w-3.5 h-3.5" />
+                              <span>+1 Mes</span>
+                            </button>
+
+                            {/* Toggle Suspend/Activate */}
                             <button
                               type="button"
                               onClick={() => handleToggleLicense(clinic)}
-                              className={`p-1.5 rounded-lg border transition-all text-xs font-semibold flex items-center gap-1 ${
+                              className={`p-1.5 rounded-lg border transition-all text-xs font-semibold ${
                                 !isSuspended
                                   ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border-amber-500/40'
-                                  : 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/40'
+                                  : 'bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border-sky-500/40'
                               }`}
-                              title={!isSuspended ? 'Suspender / Desactivar licencia del consultorio' : 'Activar licencia'}
+                              title={!isSuspended ? 'Suspender / Desactivar licencia' : 'Activar licencia'}
                             >
                               <Power className="w-3.5 h-3.5" />
-                              <span className="hidden md:inline">{!isSuspended ? 'Desactivar' : 'Activar'}</span>
                             </button>
 
                             {/* Edit Clinic */}
@@ -277,7 +375,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
                               type="button"
                               onClick={() => setEditingClinic({ ...clinic })}
                               className="p-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600"
-                              title="Editar datos y licencia"
+                              title="Editar datos y fecha de vigencia exacta"
                             >
                               <Edit3 className="w-3.5 h-3.5" />
                             </button>
@@ -287,7 +385,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
                               type="button"
                               onClick={() => handleDeleteClinic(clinic)}
                               className="p-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40"
-                              title="Eliminar consultorio y su base de datos"
+                              title="Eliminar consultorio"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -309,9 +407,16 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
         </div>
       </main>
 
+      {/* Admin Contact Edit Modal */}
+      <AdminContactModal
+        isOpen={isContactModalOpen}
+        onClose={() => setIsContactModalOpen(false)}
+        onSaved={(updated) => setAdminContact(updated)}
+      />
+
       {/* Edit Clinic Modal */}
       {editingClinic && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in">
           <div className="bg-slate-900 border border-slate-700 w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <h3 className="font-bold text-base text-white flex items-center gap-2">
@@ -398,15 +503,53 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-semibold text-slate-300">Vigencia de Licencia</label>
+                  <label className="font-semibold text-slate-300">Fecha de Vencimiento (YYYY-MM-DD)</label>
                   <input
-                    type="text"
-                    placeholder="Indefinida o YYYY-MM-DD"
-                    value={editingClinic.licenseValidUntil || 'Indefinida'}
+                    type="date"
+                    required
+                    value={editingClinic.licenseValidUntil}
                     onChange={(e) => setEditingClinic({ ...editingClinic, licenseValidUntil: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono"
                   />
                 </div>
+              </div>
+
+              {/* Quick 1 month / 3 months shortcuts */}
+              <div className="flex items-center gap-2 pt-1">
+                <span className="text-[11px] text-slate-400">Atajos de vigencia:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const d = new Date();
+                    d.setDate(d.getDate() + 30);
+                    setEditingClinic({ ...editingClinic, licenseValidUntil: d.toISOString().slice(0,10), licenseStatus: 'active' });
+                  }}
+                  className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px]"
+                >
+                  1 Mes (+30d)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const d = new Date();
+                    d.setDate(d.getDate() + 90);
+                    setEditingClinic({ ...editingClinic, licenseValidUntil: d.toISOString().slice(0,10), licenseStatus: 'active' });
+                  }}
+                  className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px]"
+                >
+                  3 Meses (+90d)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const d = new Date();
+                    d.setFullYear(d.getFullYear() + 1);
+                    setEditingClinic({ ...editingClinic, licenseValidUntil: d.toISOString().slice(0,10), licenseStatus: 'active' });
+                  }}
+                  className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px]"
+                >
+                  1 Año
+                </button>
               </div>
 
               <div className="pt-3 border-t border-slate-800 flex justify-end gap-2">

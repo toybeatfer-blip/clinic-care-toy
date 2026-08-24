@@ -1,7 +1,26 @@
 import React, { useState } from 'react';
-import { Stethoscope, KeyRound, Building2, User, ShieldCheck, Lock, LogIn, UserPlus, AlertCircle, Sparkles, CheckCircle2, Phone, Mail, MapPin } from 'lucide-react';
-import { authenticateUser, registerClinic } from '../utils/authStorage';
+import {
+  Stethoscope,
+  KeyRound,
+  Building2,
+  User,
+  ShieldCheck,
+  Lock,
+  LogIn,
+  UserPlus,
+  AlertCircle,
+  Sparkles,
+  CheckCircle2,
+  Phone,
+  Mail,
+  MapPin,
+  HelpCircle,
+  MessageCircle,
+  Clock
+} from 'lucide-react';
+import { authenticateUser, registerClinic, getAdminContactInfo } from '../utils/authStorage';
 import { SessionUser } from '../types';
+import { SuspendedLicenseNoticeModal } from './SuspendedLicenseNoticeModal';
 
 interface AuthScreenProps {
   onLoginSuccess: (session: SessionUser) => void;
@@ -32,6 +51,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   const [regError, setRegError] = useState('');
   const [regSuccess, setRegSuccess] = useState(false);
 
+  // Notice Modal for Suspended/Expired License
+  const [isNoticeOpen, setIsNoticeOpen] = useState(false);
+  const [noticeCustomError, setNoticeCustomError] = useState('');
+  const [isSuspendedState, setIsSuspendedState] = useState(false);
+
+  const adminInfo = getAdminContactInfo();
+
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
@@ -44,6 +70,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
       onLoginSuccess(result.session);
     } else {
       setLoginError(result.error || 'Credenciales no válidas.');
+      if (result.isLicenseBlocked) {
+        setNoticeCustomError(result.error || 'La licencia de este consultorio se encuentra suspendida o vencida.');
+        setIsSuspendedState(true);
+        setIsNoticeOpen(true);
+      }
     }
   };
 
@@ -79,7 +110,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
 
     if (regResult.success && regResult.clinic) {
       setRegSuccess(true);
-      // Iniciar sesión automáticamente tras registro exitoso
       const auth = authenticateUser(regResult.clinic.username, regResult.clinic.passwordPlain);
       if (auth.success && auth.session) {
         setTimeout(() => {
@@ -95,7 +125,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-sky-950 to-slate-900 flex flex-col justify-center items-center p-4 sm:p-6 text-slate-100 selection:bg-sky-500 selection:text-white">
       
       {/* Brand Header */}
-      <div className="text-center mb-6 max-w-md">
+      <div className="text-center mb-5 max-w-md">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 shadow-xl shadow-sky-500/20 mb-3 text-white">
           <Stethoscope className="w-9 h-9" />
         </div>
@@ -142,20 +172,49 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
         {/* TAB 1: LOGIN */}
         {activeTab === 'login' && (
           <form onSubmit={handleLoginSubmit} className="p-6 sm:p-8 space-y-5 animate-in fade-in">
-            <div>
-              <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Acceso a Consultorio</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Ingresa con las credenciales de tu consultorio o como Super Administrador.
-              </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Acceso a Consultorio</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Ingresa con tus credenciales o como Super Administrador.
+                </p>
+              </div>
+
+              {/* Button to open Administrator Contact Info */}
+              <button
+                type="button"
+                onClick={() => {
+                  setNoticeCustomError('');
+                  setIsNoticeOpen(true);
+                }}
+                className="text-[11px] px-2.5 py-1 rounded-lg bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 font-semibold hover:bg-sky-100 transition-colors flex items-center gap-1"
+                title="Ver datos de contacto del administrador para renovar licencia"
+              >
+                <HelpCircle className="w-3.5 h-3.5 text-sky-600" />
+                <span>Soporte / Licencias</span>
+              </button>
             </div>
 
             {loginError && (
-              <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs flex items-start gap-2.5">
-                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                <div>
-                  <strong className="block font-bold">Error de inicio de sesión:</strong>
-                  {loginError}
+              <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs flex items-start justify-between gap-2.5">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="block font-bold">Aviso de acceso:</strong>
+                    {loginError}
+                  </div>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNoticeCustomError(loginError);
+                    setIsNoticeOpen(true);
+                  }}
+                  className="px-2.5 py-1 rounded bg-rose-600 text-white font-bold text-[11px] shrink-0 hover:bg-rose-700 transition-colors shadow-sm"
+                >
+                  Contactar Admin
+                </button>
               </div>
             )}
 
@@ -171,7 +230,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                   value={loginUser}
                   onChange={(e) => setLoginUser(e.target.value)}
                   placeholder="Ej. consultorio1404 ó Fernando01"
-                  className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono"
                 />
               </div>
 
@@ -200,20 +259,38 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
               <span>{isSubmitting ? 'Verificando...' : 'Iniciar Sesión'}</span>
             </button>
 
-            <div className="pt-2 text-center text-xs text-slate-500 border-t border-slate-100 dark:border-slate-800">
-              ¿No tienes cuenta? <button type="button" onClick={() => setActiveTab('register')} className="text-sky-600 hover:underline font-bold">Registra tu consultorio aquí</button>
+            <div className="pt-2 flex items-center justify-between text-xs text-slate-500 border-t border-slate-100 dark:border-slate-800">
+              <div>
+                ¿Nuevo consultorio? <button type="button" onClick={() => setActiveTab('register')} className="text-sky-600 hover:underline font-bold">Registrarse aquí</button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsNoticeOpen(true)}
+                className="text-slate-500 hover:text-sky-600 flex items-center gap-1 font-medium"
+              >
+                <MessageCircle className="w-3.5 h-3.5 text-emerald-500" />
+                <span>WhatsApp Admin</span>
+              </button>
             </div>
           </form>
         )}
 
-        {/* TAB 2: REGISTER */}
+        {/* TAB 2: REGISTER (1 MES DE VIGENCIA) */}
         {activeTab === 'register' && (
           <form onSubmit={handleRegisterSubmit} className="p-6 sm:p-8 space-y-4 animate-in fade-in max-h-[75vh] overflow-y-auto">
-            <div>
-              <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Registro de Nuevo Consultorio</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Crea el espacio y la base de datos propia e independiente para tu consultorio.
-              </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Registro de Nuevo Consultorio</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Crea tu espacio con base de datos en blanco y <strong>licencia inicial de 1 mes</strong>.
+                </p>
+              </div>
+
+              <span className="text-[11px] font-bold px-2 py-1 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                <span>1 Mes de Acceso</span>
+              </span>
             </div>
 
             {regError && (
@@ -226,7 +303,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
             {regSuccess && (
               <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>¡Consultorio registrado con éxito! Iniciando sesión...</span>
+                <span>¡Consultorio registrado con éxito! Licencia de 1 mes activada. Iniciando sesión...</span>
               </div>
             )}
 
@@ -386,15 +463,23 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
               className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2 mt-2"
             >
               <CheckCircle2 className="w-4 h-4" />
-              <span>Registrar y Crear Base de Datos</span>
+              <span>Registrar Consultorio (Licencia de 1 Mes)</span>
             </button>
           </form>
         )}
       </div>
 
+      {/* Notice Modal */}
+      <SuspendedLicenseNoticeModal
+        isOpen={isNoticeOpen}
+        onClose={() => setIsNoticeOpen(false)}
+        customError={noticeCustomError}
+        isSuspended={isSuspendedState}
+      />
+
       {/* Footer Info */}
       <p className="text-[11px] text-slate-400 mt-6 text-center">
-        Sistema Administrador de Consultorios • NOM-004-SSA3-2012 • Seguridad Multi-Tenant
+        Sistema Administrador de Consultorios • NOM-004-SSA3-2012 • Licencias Mensuales
       </p>
     </div>
   );

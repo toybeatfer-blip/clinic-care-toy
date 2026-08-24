@@ -34,16 +34,16 @@ export interface IdentificationData {
 }
 
 export interface VitalSigns {
-  temp: string; // ej. 36.5
-  taSistolica: string; // ej. 120
-  taDiastolica: string; // ej. 80
-  taPediatricaBadge: string; // 'PEDIÁTRICO' | 'INFANTE' | 'MENOR' | ''
-  fc: string; // ej. 75
-  fr: string; // ej. 18
-  satO2: string; // ej. 98 (% saturación de oxígeno)
-  peso: string; // ej. 70.5
-  talla: string; // ej. 1.70 (metros con punto decimal)
-  imc: string; // calculado
+  temp: string;
+  taSistolica: string;
+  taDiastolica: string;
+  taPediatricaBadge: string;
+  fc: string;
+  fr: string;
+  satO2: string; // % saturación de oxígeno
+  peso: string;
+  talla: string;
+  imc: string;
   glucosa?: string;
 }
 
@@ -53,29 +53,29 @@ export interface PhysicalExam {
   torax: string;
   abdomen: string;
   miembros: string;
-  genitales: string; // "Diferido" o "No explorado"
+  genitales: string;
 }
 
 export interface PrescriptionItem {
   id: string;
   producto: string;
   marcaInstitucional?: 'ALMUS' | 'GENÉRICO' | 'PATENTE' | 'OTRO';
-  cantidad: string; // ej. 1 caja, 2 piezas
+  cantidad: string;
   via: 'Oral' | 'Intramuscular' | 'Intravenosa' | 'Tópica' | 'Oftálmica' | 'Ótica' | 'Nasal' | 'Sublingual' | 'Inhalatoria' | 'Rectal';
-  dosis: string; // ej. 500 mg cada 8 horas
-  periodicidad: string; // ej. Tomar 1 tableta cada 8 horas por 7 días
+  dosis: string;
+  periodicidad: string;
   indicacionesAdicionales?: string;
 }
 
 export interface HistoryCheckupData {
   padecimientoActual: string;
-  interrogatorioAparatos: string; // debe terminar con "...resto del interrogatorio negado."
+  interrogatorioAparatos: string;
   vitalSigns: VitalSigns;
   physicalExam: PhysicalExam;
-  diagnosticoCie10: string; // ej. "J00X - Rinofaringitis aguda [resfriado común]"
+  diagnosticoCie10: string;
   diagnosticoSecundario?: string;
-  pronostico: string; // "Favorable para la vida y función" | "Reservado a evolución"
-  indicacionTerapeutica: string; // higiénico dietéticas, alarma, cita abierta/revaloración
+  pronostico: string;
+  indicacionTerapeutica: string;
   prescripcion: PrescriptionItem[];
 }
 
@@ -96,7 +96,7 @@ export interface ProcedureData {
   presentacionDosis?: string;
   zonaAplicacion?: string;
   cifrasNumericas?: string;
-  leyendaTestigos: string; // "Se cuenta con firma de consentimiento informado por paciente y testigo" | "No se cuenta con un segundo testigo"
+  leyendaTestigos: string;
 }
 
 export interface ClinicalRecord {
@@ -120,14 +120,11 @@ export interface DoctorSettings {
   universidad: string;
   telefonoContacto: string;
   correoContacto: string;
-  // Consultorio / Clinica
   nombreClinica: string;
   sucursal: string;
   direccionClinica: string;
   telefonoClinica: string;
-  // Logo
-  logoUrl: string; // base64 or URL
-  // Theme
+  logoUrl: string;
   primaryColor: 'sky' | 'emerald' | 'blue' | 'indigo' | 'purple' | 'teal' | 'rose';
 }
 
@@ -136,8 +133,8 @@ export type LicenseStatus = 'active' | 'suspended' | 'expired';
 export interface ClinicAccount {
   id: string;
   clinicName: string;
-  username: string; // único
-  passwordPlain: string; // clave del consultorio
+  username: string;
+  passwordPlain: string;
   doctorName: string;
   prefix: 'Dr.' | 'Dra.' | 'Médico';
   cedulaGeneral: string;
@@ -153,8 +150,15 @@ export interface ClinicAccount {
   createdAt: string;
   lastLoginAt: string;
   licenseStatus: LicenseStatus;
-  licenseValidUntil: string; // "Indefinida" o fecha YYYY-MM-DD
+  licenseValidUntil: string; // Fecha YYYY-MM-DD
   notes?: string;
+}
+
+export interface AdminContactInfo {
+  adminName: string;
+  phoneWhatsApp: string;
+  email: string;
+  helpMessage: string;
 }
 
 export interface SessionUser {
@@ -177,6 +181,6 @@ export interface InstitutionalMed {
   brand: 'ALMUS' | 'GENÉRICO' | 'PATENTE';
   presentation: string;
   category: string;
-  isControlledWeight?: boolean; // Requiere IMC > 25
+  isControlledWeight?: boolean;
   defaultDose?: string;
 }

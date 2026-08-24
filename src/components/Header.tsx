@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Stethoscope, Clock, BookOpen, Sparkles, FolderOpen, UserPlus, Printer, Settings, Ticket, LogOut, ShieldCheck, Building2 } from 'lucide-react';
+import { Stethoscope, Clock, BookOpen, Sparkles, FolderOpen, UserPlus, Printer, Settings, Ticket, LogOut, ShieldCheck, Building2, Calendar } from 'lucide-react';
 import { CopyButton } from './CopyButton';
 import { DoctorSettings, SessionUser } from '../types';
+import { getDaysRemaining } from '../utils/authStorage';
 
 interface HeaderProps {
   ticketFolio: string;
@@ -44,6 +45,8 @@ export const Header: React.FC<HeaderProps> = ({
 
   const clinicName = session.clinicAccount?.clinicName || doctorSettings.nombreClinica || 'Consultorio Médico';
   const doctorDisplayName = doctorSettings.doctorName ? `${doctorSettings.prefix} ${doctorSettings.doctorName}` : (session.clinicAccount ? `${session.clinicAccount.prefix} ${session.clinicAccount.doctorName}` : 'Médico en Turno');
+  
+  const licenseRemaining = session.clinicAccount ? getDaysRemaining(session.clinicAccount.licenseValidUntil) : null;
 
   return (
     <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 shadow-sm">
@@ -67,10 +70,16 @@ export const Header: React.FC<HeaderProps> = ({
                 <h1 className="font-extrabold text-base sm:text-lg tracking-tight text-slate-800 dark:text-slate-100">
                   {clinicName}
                 </h1>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
-                  <ShieldCheck className="w-3 h-3" />
-                  <span>Licencia Activa</span>
-                </span>
+                {licenseRemaining && (
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 ${
+                    licenseRemaining.days <= 5
+                      ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                      : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                  }`}>
+                    <ShieldCheck className="w-3 h-3" />
+                    <span>Licencia: {licenseRemaining.label}</span>
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-xs sm:max-w-md">
                 {doctorDisplayName} {session.clinicAccount?.sucursal && `• ${session.clinicAccount.sucursal}`} (Usuario: {session.username})

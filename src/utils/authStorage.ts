@@ -1,12 +1,59 @@
-import { ClinicAccount, SessionUser, ClinicalRecord, DoctorSettings, LicenseStatus } from '../types';
+import { ClinicAccount, SessionUser, ClinicalRecord, DoctorSettings, LicenseStatus, AdminContactInfo } from '../types';
 
 export const SUPERADMIN_USER = 'Fernando01';
 export const SUPERADMIN_PASS = 'Bazzoka1313AS.';
 
 const MASTER_CLINICS_KEY = 'clinic_care_clinics_master_v2';
 const SESSION_KEY = 'clinic_care_session_v2';
+const ADMIN_CONTACT_KEY = 'clinic_care_admin_contact_v2';
 
-// 1. GESTIÓN DE SESIÓN
+// 1. DATOS DE CONTACTO DEL ADMINISTRADOR
+export function getAdminContactInfo(): AdminContactInfo {
+  try {
+    const raw = localStorage.getItem(ADMIN_CONTACT_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {
+    console.error('Error loading admin contact info', e);
+  }
+  return {
+    adminName: 'Fernando (Super Administrador)',
+    phoneWhatsApp: '55 1234 5678',
+    email: 'toybeatfer@gmail.com',
+    helpMessage: 'Para renovar tu licencia mensual o resolver dudas sobre tu cuenta de consultorio, comunícate directamente con el administrador del sistema.'
+  };
+}
+
+export function saveAdminContactInfo(info: AdminContactInfo): void {
+  try {
+    localStorage.setItem(ADMIN_CONTACT_KEY, JSON.stringify(info));
+  } catch (e) {
+    console.error('Error saving admin contact info', e);
+  }
+}
+
+// 2. GESTIÓN DE VENCIMIENTO Y DÍAS RESTANTES (1 MES DE DURACIÓN)
+export function getDaysRemaining(validUntil: string): { days: number; isExpired: boolean; label: string } {
+  if (!validUntil || validUntil === 'Indefinida') {
+    return { days: 9999, isExpired: false, label: 'Licencia Permanente' };
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const [year, month, day] = validUntil.split('-').map(Number);
+  const expDate = new Date(year, month - 1, day, 23, 59, 59);
+
+  const diffTime = expDate.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays <= 0) {
+    return { days: diffDays, isExpired: true, label: `Vencida (${Math.abs(diffDays)} días)` };
+  }
+
+  return { days: diffDays, isExpired: false, label: `${diffDays} día${diffDays > 1 ? 's' : ''} restante${diffDays > 1 ? 's' : ''}` };
+}
+
+// 3. GESTIÓN DE SESIÓN
 export function getCurrentSession(): SessionUser | null {
   try {
     const raw = localStorage.getItem(SESSION_KEY);
@@ -34,12 +81,21 @@ export function clearSession(): void {
   }
 }
 
-// 2. REGISTRO MAESTRO DE CONSULTORIOS
+// 4. REGISTRO MAESTRO DE CONSULTORIOS (DURACIÓN DE 1 MES)
 export function getAllClinics(): ClinicAccount[] {
   try {
     const raw = localStorage.getItem(MASTER_CLINICS_KEY);
     if (!raw) return [];
-    return JSON.parse(raw);
+    const list: ClinicAccount[] = JSON.parse(raw);
+    
+    // Auto-evaluar vencimientos al listar
+    return list.map(c => {
+      const remaining = getDaysRemaining(c.licenseValidUntil);
+      if (remaining.isExpired && c.licenseStatus === 'active') {
+        return { ...c, licenseStatus: 'expired' };
+      }
+      return c;
+    });
   } catch (e) {
     console.error('Error loading clinics', e);
     return [];
@@ -58,7 +114,6 @@ export function registerClinic(data: Omit<ClinicAccount, 'id' | 'createdAt' | 'l
   const clinics = getAllClinics();
   const normalizedUser = data.username.trim().toLowerCase();
 
-  // Validar si el usuario ya existe o si es el superadmin
   if (normalizedUser === SUPERADMIN_USER.toLowerCase()) {
     return { success: false, error: 'El nombre de usuario no está disponible.' };
   }
@@ -68,6 +123,11 @@ export function registerClinic(data: Omit<ClinicAccount, 'id' | 'createdAt' | 'l
     return { success: false, error: `El usuario "${data.username}" ya está registrado en otro consultorio.` };
   }
 
+  // Duración inicial de exactamente 1 mes (30 días)
+  const expDate = new Date();
+  expDate.setDate(expDate.getDate() + 30);
+  const validUntilStr = expDate.toISOString().slice(0, 10);
+
   const newClinic: ClinicAccount = {
     ...data,
     id: crypto.randomUUID ? crypto.randomUUID() : `clinic_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
@@ -75,7 +135,7 @@ export function registerClinic(data: Omit<ClinicAccount, 'id' | 'createdAt' | 'l
     createdAt: new Date().toISOString(),
     lastLoginAt: new Date().toISOString(),
     licenseStatus: 'active',
-    licenseValidUntil: 'Indefinida'
+    licenseValidUntil: validUntilStr
   };
 
   const updatedClinics = [newClinic, ...clinics];
@@ -97,7 +157,6 @@ export function updateClinic(clinicId: string, updates: Partial<ClinicAccount>):
   });
   saveAllClinics(next);
 
-  // Si la sesión actual corresponde a este consultorio, actualizarla
   const currentSession = getCurrentSession();
   if (currentSession && currentSession.clinicId === clinicId) {
     const updatedAccount = next.find(c => c.id === clinicId);
@@ -117,7 +176,6 @@ export function deleteClinic(clinicId: string): ClinicAccount[] {
   const filtered = clinics.filter(c => c.id !== clinicId);
   saveAllClinics(filtered);
 
-  // Eliminar los datos aislados del consultorio
   try {
     localStorage.removeItem(`clinic_care_records_clinic_${clinicId}_v2`);
     localStorage.removeItem(`clinic_care_settings_clinic_${clinicId}_v2`);
@@ -136,8 +194,31 @@ export function setClinicLicense(clinicId: string, status: LicenseStatus, validU
   });
 }
 
-// 3. AUTENTICACIÓN
-export function authenticateUser(usernameInput: string, passwordInput: string): { success: boolean; session?: SessionUser; error?: string } {
+// Renovar licencia agregando días (por ejemplo 30 días para 1 mes más)
+export function renewClinicLicense(clinicId: string, daysToAdd: number = 30): ClinicAccount[] {
+  const clinics = getAllClinics();
+  const target = clinics.find(c => c.id === clinicId);
+  if (!target) return clinics;
+
+  let baseDate = new Date();
+  if (target.licenseValidUntil && target.licenseValidUntil !== 'Indefinida') {
+    const currentExp = new Date(target.licenseValidUntil + 'T23:59:59');
+    if (currentExp > baseDate) {
+      baseDate = currentExp;
+    }
+  }
+
+  baseDate.setDate(baseDate.getDate() + daysToAdd);
+  const newValidUntil = baseDate.toISOString().slice(0, 10);
+
+  return updateClinic(clinicId, {
+    licenseStatus: 'active',
+    licenseValidUntil: newValidUntil
+  });
+}
+
+// 5. AUTENTICACIÓN
+export function authenticateUser(usernameInput: string, passwordInput: string): { success: boolean; session?: SessionUser; error?: string; isLicenseBlocked?: boolean } {
   const user = usernameInput.trim();
   const pass = passwordInput.trim();
 
@@ -163,13 +244,23 @@ export function authenticateUser(usernameInput: string, passwordInput: string): 
     return { success: false, error: 'Contraseña incorrecta para este consultorio.' };
   }
 
-  // Verificar estado de la licencia
-  if (found.licenseStatus === 'suspended') {
-    return { success: false, error: 'Acceso suspendido. La licencia de este consultorio fue desactivada por el administrador (Fernando01).' };
+  // Verificar vencimiento de licencia (1 mes)
+  const remaining = getDaysRemaining(found.licenseValidUntil);
+  if (remaining.isExpired) {
+    updateClinic(found.id, { licenseStatus: 'expired' });
+    return {
+      success: false,
+      isLicenseBlocked: true,
+      error: `La licencia mensual de este consultorio venció el ${found.licenseValidUntil}. Contacta al administrador para renovarla.`
+    };
   }
 
-  if (found.licenseStatus === 'expired') {
-    return { success: false, error: 'Licencia vencida. Contacta a Fernando01 para renovar el acceso de este consultorio.' };
+  if (found.licenseStatus === 'suspended') {
+    return {
+      success: false,
+      isLicenseBlocked: true,
+      error: 'Acceso suspendido. La licencia de este consultorio se encuentra inactiva por disposición del administrador.'
+    };
   }
 
   // Actualizar última fecha de inicio de sesión
@@ -186,7 +277,7 @@ export function authenticateUser(usernameInput: string, passwordInput: string): 
   return { success: true, session };
 }
 
-// 4. BASES DE DATOS AISLADAS POR CONSULTORIO (TOTALMENTE EN BLANCO)
+// 6. BASES DE DATOS AISLADAS POR CONSULTORIO (TOTALMENTE EN BLANCO)
 export function getBlankClinicalRecord(): ClinicalRecord {
   return {
     id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
@@ -289,12 +380,10 @@ export function initClinicDatabase(clinic: ClinicAccount): void {
   const recordsKey = `clinic_care_records_clinic_${clinic.id}_v2`;
   const settingsKey = `clinic_care_settings_clinic_${clinic.id}_v2`;
 
-  // Asegurar que inicie en blanco (0 pacientes)
   if (!localStorage.getItem(recordsKey)) {
     localStorage.setItem(recordsKey, JSON.stringify([]));
   }
 
-  // Guardar configuración del médico del consultorio
   const doctorSettings: DoctorSettings = {
     doctorName: clinic.doctorName,
     prefix: clinic.prefix,
@@ -315,7 +404,7 @@ export function initClinicDatabase(clinic: ClinicAccount): void {
   localStorage.setItem(settingsKey, JSON.stringify(doctorSettings));
 }
 
-// 5. OPERACIONES DE BASE DE DATOS DEL CONSULTORIO ACTIVO
+// 7. OPERACIONES DE BASE DE DATOS DEL CONSULTORIO ACTIVO
 export function getClinicRecords(clinicId: string): ClinicalRecord[] {
   try {
     const raw = localStorage.getItem(`clinic_care_records_clinic_${clinicId}_v2`);
@@ -390,7 +479,6 @@ export function getClinicSettings(clinicId: string): DoctorSettings {
 export function saveClinicSettings(clinicId: string, settings: DoctorSettings): void {
   try {
     localStorage.setItem(`clinic_care_settings_clinic_${clinicId}_v2`, JSON.stringify(settings));
-    // Sincronizar con ClinicAccount
     updateClinic(clinicId, {
       clinicName: settings.nombreClinica,
       doctorName: settings.doctorName,
