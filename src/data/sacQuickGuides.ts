@@ -72,7 +72,7 @@ export const SAC_OPERATIONAL_GUIDES: OperationalTopic[] = [
       'Exploración Ginecológica y Urológica: Asentar siempre "Diferido" o "No explorado".',
       'Somatometría: Talla siempre en metros con punto decimal (ej. 1.70 m, nunca 170 cm). T/A pediátrica asentar "PEDIÁTRICO", "INFANTE" o "MENOR".',
       'Diagnósticos: Código CIE-10 exacto y descripción oficial.',
-      'Prescripción: Priorizar genéricos FABE y ALMUS. En control de peso, medicamento controlado SOLO si IMC > 25 kg/m².',
+      'Prescripción: Priorizar genéricos y marcas institucionales (ALMUS). En control de peso, medicamento controlado SOLO si IMC > 25 kg/m².',
       'Procedimientos: En inyección IM detallar sustancia, presentación y dosis exacta. Obligatorio firma de testigo o leyenda de no contar con segundo testigo.'
     ]
   }

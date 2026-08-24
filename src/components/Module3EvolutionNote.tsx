@@ -3,7 +3,7 @@ import { EvolutionNoteData } from '../types';
 import { FieldWithCopy } from './FieldWithCopy';
 import { CopyButton } from './CopyButton';
 import { generateModule3Text, calculateIMC, formatTallaInput } from '../utils/nom004Validator';
-import { ClipboardList, Activity, RefreshCw } from 'lucide-react';
+import { ClipboardList, Activity } from 'lucide-react';
 
 interface Module3EvolutionNoteProps {
   data: EvolutionNoteData;
@@ -71,19 +71,19 @@ export const Module3EvolutionNote: React.FC<Module3EvolutionNoteProps> = ({
           required
         />
 
-        {/* Current Vital Signs */}
+        {/* Current Vital Signs with SpO2 */}
         <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-400">
               <Activity className="w-4 h-4" />
-              <span>Signos Vitales Actuales de Revaloración</span>
+              <span>Signos Vitales Actuales de Revaloración (con SpO2)</span>
             </div>
             <span className="text-[11px] font-mono text-slate-500">
               IMC: {data.vitalSigns?.imc || '0.00'} kg/m²
             </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
             <FieldWithCopy
               label="Temp (°C)"
               value={data.vitalSigns?.temp || ''}
@@ -117,6 +117,15 @@ export const Module3EvolutionNote: React.FC<Module3EvolutionNoteProps> = ({
               value={data.vitalSigns?.fr || ''}
               onChange={(v) => updateVital('fr', v)}
               placeholder="18"
+            />
+
+            {/* SpO2 */}
+            <FieldWithCopy
+              label="SpO2 (%)"
+              value={data.vitalSigns?.satO2 || ''}
+              onChange={(v) => updateVital('satO2', v)}
+              placeholder="98"
+              quickFillOptions={['98', '99', '97', '96', '95']}
             />
 
             <FieldWithCopy

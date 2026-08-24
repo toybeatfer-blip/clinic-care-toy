@@ -7,8 +7,6 @@ export function parseRawMedicalNote(rawText: string, existingRecord?: ClinicalRe
   const text = rawText.trim();
   if (!text) return {};
 
-  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-
   // 1. Detectar Sexo y Edad
   let detectedGender: Gender = 'Masculino';
   if (/femenin[oa]|mujer|paciente\s+f\b|femenina|niña|señora/i.test(text)) {
@@ -66,6 +64,10 @@ export function parseRawMedicalNote(rawText: string, existingRecord?: ClinicalRe
   const frMatch = text.match(/(?:fr|frecuencia respiratoria|rpm)\s*(?:de|:)?\s*(\d{1,2})/i);
   if (frMatch) fr = frMatch[1];
 
+  let satO2 = '';
+  const satMatch = text.match(/(?:sato2|spo2|saturaci[oó]n|sat|oxigeno|oxígeno)\s*(?:de|:)?\s*(\d{2,3})\s*%?/i);
+  if (satMatch) satO2 = satMatch[1];
+
   let peso = '';
   const pesoMatch = text.match(/(?:peso|kg)\s*(?:de|:)?\s*(\d{1,3}(?:\.\d{1,2})?)\s*(?:kg|kilos)?/i);
   if (pesoMatch) peso = pesoMatch[1];
@@ -77,10 +79,6 @@ export function parseRawMedicalNote(rawText: string, existingRecord?: ClinicalRe
     if (tVal > 3.0) tVal = tVal / 100;
     talla = tVal.toFixed(2);
   }
-
-  let satO2 = '';
-  const satMatch = text.match(/(?:sato2|spo2|saturaci[oó]n|sat)\s*(?:de|:)?\s*(\d{2,3})\s*%?/i);
-  if (satMatch) satO2 = satMatch[1];
 
   let glucosa = '';
   const gluMatch = text.match(/(?:glucosa|dxtx|hgt|glicemia)\s*(?:de|:)?\s*(\d{2,3})\s*(?:mg\/dl)?/i);
@@ -100,7 +98,6 @@ export function parseRawMedicalNote(rawText: string, existingRecord?: ClinicalRe
     }
   }
   if (!detectedCie10) {
-    // Si menciona gripe / tos / garganta
     if (/garganta|faringe|odinofagia|amigdal/i.test(text)) {
       detectedCie10 = 'J02.9 - Faringitis aguda, no especificada';
     } else if (/gripe|resfriado|rinorrea|tos\s+seca/i.test(text)) {
@@ -116,7 +113,7 @@ export function parseRawMedicalNote(rawText: string, existingRecord?: ClinicalRe
     }
   }
 
-  // 5. Detectar Medicamentos y armar prescripción institucional
+  // 5. Detectar Medicamentos y armar prescripción
   const prescripciones: PrescriptionItem[] = [];
   const medMatches = text.match(/(?:tx|tratamiento|medicamento|receta|dar|indicar|prescribir):?([\s\S]*?)(?:pronostico|indicaciones|observaciones|$)/i);
   const medSection = medMatches ? medMatches[1] : text;
@@ -142,8 +139,8 @@ export function parseRawMedicalNote(rawText: string, existingRecord?: ClinicalRe
     if (/paracetamol/i.test(text)) {
       prescripciones.push({
         id: String(Math.random()),
-        producto: 'Paracetamol 500 mg Tabletas (FABE)',
-        marcaInstitucional: 'FABE',
+        producto: 'Paracetamol 500 mg Tabletas',
+        marcaInstitucional: 'GENÉRICO',
         cantidad: '1 caja con 20 tabletas',
         via: 'Oral',
         dosis: '500 mg',
@@ -153,8 +150,8 @@ export function parseRawMedicalNote(rawText: string, existingRecord?: ClinicalRe
     if (/amoxi|amoxicilina/i.test(text)) {
       prescripciones.push({
         id: String(Math.random()),
-        producto: 'Amoxicilina / Ácido Clavulánico 875 mg / 125 mg Tabletas (FABE)',
-        marcaInstitucional: 'FABE',
+        producto: 'Amoxicilina / Ácido Clavulánico 875 mg / 125 mg Tabletas',
+        marcaInstitucional: 'GENÉRICO',
         cantidad: '1 caja con 14 tabletas',
         via: 'Oral',
         dosis: '875 mg / 125 mg',
@@ -165,13 +162,12 @@ export function parseRawMedicalNote(rawText: string, existingRecord?: ClinicalRe
 
   // 6. Construir Redacción Médica Formal de Padecimiento Actual
   let padecimiento = cleanForbiddenAcronyms(text)
-    .replace(/(?:nombre|paciente|edad|sexo|signos|ta|fc|fr|peso|talla|dx|tx|receta):[^\n]*/gi, '')
+    .replace(/(?:nombre|paciente|edad|sexo|signos|ta|fc|fr|sat|spo2|peso|talla|dx|tx|receta):[^\n]*/gi, '')
     .trim();
 
   if (!padecimiento || padecimiento.length < 15) {
     padecimiento = `Paciente ${detectedGender.toLowerCase()} de ${detectedAge || 'edad no especificada'} años acude a consulta médica por presentar cuadro clínico caracterizado por sintomatología referida de evolución reciente. Refiere malestar general y solicita valoración diagnóstica y tratamiento oportuno.`;
   } else {
-    // Formatear profesionalmente
     padecimiento = `Inicia su padecimiento actual ${padecimiento.replace(/^\w/, c => c.toUpperCase())}. No refiere sintomatología previa similar ni automedicación de relevancia.`;
   }
 
@@ -222,10 +218,10 @@ export function parseRawMedicalNote(rawText: string, existingRecord?: ClinicalRe
         taPediatricaBadge: taBadge,
         fc: fc || '76',
         fr: fr || '18',
+        satO2: satO2 || '98',
         peso: peso || '70.0',
         talla: talla || '1.70',
         imc: imcCalc.imc,
-        satO2: satO2 || '98',
         glucosa: glucosa || ''
       },
       physicalExam: {
@@ -242,8 +238,8 @@ export function parseRawMedicalNote(rawText: string, existingRecord?: ClinicalRe
       prescripcion: prescripciones.length > 0 ? prescripciones : [
         {
           id: '1',
-          producto: 'Paracetamol 500 mg Tabletas (FABE)',
-          marcaInstitucional: 'FABE',
+          producto: 'Paracetamol 500 mg Tabletas',
+          marcaInstitucional: 'GENÉRICO',
           cantidad: '1 caja con 20 tabletas',
           via: 'Oral',
           dosis: 'Tomar 1 tableta cada 8 horas',

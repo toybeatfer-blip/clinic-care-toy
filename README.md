@@ -9,7 +9,7 @@
 
 1. **Módulos Clínicos para SAC (Listos para Copiar y Pegar):**
    - **Módulo 1: Alta y Ficha de Identificación:** Prevención de duplicidad de expedientes, desglose de código postal y autocompletado de antecedentes.
-   - **Módulo 2: Historia Clínica General / Checkup:** Padecimiento actual cronológico, interrogatorio por sistemas con terminación normativa obligatoria (`"...resto del interrogatorio negado."`), somatometría con cálculo de IMC automático y validación estricta de estatura en metros, catálogo **CIE-10** interactivo y prescripción institucional (**FABE** / **ALMUS**).
+   - **Módulo 2: Historia Clínica General / Checkup:** Padecimiento actual cronológico, interrogatorio por sistemas con terminación normativa obligatoria (`"...resto del interrogatorio negado."`), somatometría con SpO2 y cálculo de IMC automático, validación estricta de estatura en metros, catálogo **CIE-10** interactivo y prescripción institucional (**ALMUS** / Genéricos).
    - **Módulo 3: Nota de Evolución y Seguimiento:** Revaloración del cuadro clínico, exploración física dirigida y ajuste terapéutico.
    - **Módulo 4: Procedimientos y Consentimientos Informados:** Registro de inyecciones intramusculares (fármaco, dosis, presentación y zona), curaciones, retiro de puntos y leyendas oficiales de testigos.
 
@@ -23,7 +23,7 @@
    - Configura el nombre del médico, cédula profesional general y de especialidad, universidad, teléfono y correo.
    - Configura nombre de la clínica, sucursal y dirección completa.
    - Carga de **logotipo institucional** personalizado (PNG, JPG, SVG).
-   - Paleta de colores personalizable (Azul SAC, Verde FABE, Azul ALMUS, Índigo, Morado, Turquesa, Carmesí).
+   - Paleta de colores personalizable (Azul SAC, Verde Médico, Azul ALMUS, Índigo, Morado, Turquesa, Carmesí).
 
 5. **📄 Receta y Nota Médica Imprimible (PDF):**
    - Generación de nota médica y receta oficial con membrete profesional, logotipo, datos del médico, cédulas, dirección y líneas de firma.

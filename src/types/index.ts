@@ -40,11 +40,11 @@ export interface VitalSigns {
   taPediatricaBadge: string; // 'PEDIÁTRICO' | 'INFANTE' | 'MENOR' | ''
   fc: string; // ej. 75
   fr: string; // ej. 18
+  satO2: string; // ej. 98 (% de saturación de oxígeno)
   peso: string; // ej. 70.5
   talla: string; // ej. 1.70 (metros con punto decimal)
   imc: string; // calculado
   glucosa?: string;
-  satO2?: string;
 }
 
 export interface PhysicalExam {
@@ -59,7 +59,7 @@ export interface PhysicalExam {
 export interface PrescriptionItem {
   id: string;
   producto: string;
-  marcaInstitucional?: 'FABE' | 'ALMUS' | 'GENÉRICO' | 'OTRO';
+  marcaInstitucional?: 'ALMUS' | 'GENÉRICO' | 'PATENTE' | 'OTRO';
   cantidad: string; // ej. 1 caja, 2 piezas
   via: 'Oral' | 'Intramuscular' | 'Intravenosa' | 'Tópica' | 'Oftálmica' | 'Ótica' | 'Nasal' | 'Sublingual' | 'Inhalatoria' | 'Rectal';
   dosis: string; // ej. 500 mg cada 8 horas
@@ -141,7 +141,7 @@ export interface Cie10Item {
 export interface InstitutionalMed {
   name: string;
   substance: string;
-  brand: 'FABE' | 'ALMUS' | 'GENÉRICO';
+  brand: 'ALMUS' | 'GENÉRICO' | 'PATENTE';
   presentation: string;
   category: string;
   isControlledWeight?: boolean; // Requiere IMC > 25

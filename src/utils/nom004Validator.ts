@@ -235,6 +235,7 @@ export function generateModule2Text(data: HistoryCheckupData): string {
   ).join('\n\n');
 
   const taDisplay = v.taPediatricaBadge ? `${v.taPediatricaBadge}` : `${v.taSistolica || '120'}/${v.taDiastolica || '80'}`;
+  const spo2Display = v.satO2 ? ` | SpO2: ${v.satO2}%` : ' | SpO2: 98%';
 
   return `* Padecimiento Actual:
   ${data.padecimientoActual || 'Acude a valoración médica general.'}
@@ -244,12 +245,12 @@ export function generateModule2Text(data: HistoryCheckupData): string {
 
 * Exploración Física:
   - Habitus Exterior: ${pe.habitusExterior || 'Paciente consciente, orientado en sus tres esferas neurológicas, reactivo, bien hidratado, con adecuada coloración de tegumentos y marcha normal.'}
-  - Signos Vitales: Temp: ${v.temp || '36.5'} °C | T/A: ${taDisplay} mmHg | FC: ${v.fc || '75'} lpm | FR: ${v.fr || '18'} rpm | Peso: ${v.peso || '70.0'} kg | Talla: ${v.talla || '1.70'} m | IMC: ${v.imc || '24.22'} kg/m²${v.satO2 ? ` | SpO2: ${v.satO2}%` : ''}${v.glucosa ? ` | Glucosa: ${v.glucosa} mg/dL` : ''}
+  - Signos Vitales: Temp: ${v.temp || '36.5'} °C | T/A: ${taDisplay} mmHg | FC: ${v.fc || '75'} lpm | FR: ${v.fr || '18'} rpm${spo2Display} | Peso: ${v.peso || '70.0'} kg | Talla: ${v.talla || '1.70'} m | IMC: ${v.imc || '24.22'} kg/m²${v.glucosa ? ` | Glucosa: ${v.glucosa} mg/dL` : ''}
   - Cabeza / Cuello: ${pe.cabezaCuello || 'Normocéfalo, sin exostosis ni hundimientos, pupilas isocóricas normorreflécticas, faringe sin alteraciones, cuello simétrico sin adenomegalias palpables.'}
   - Tórax: ${pe.torax || 'Normolíneo, con adecuada amplexión y amplexación, campos pulmonares bien ventilados sin estertores ni sibilancias, ruidos cardiacos rítmicos de buen tono e intensidad sin soplos agregados.'}
   - Abdomen: ${pe.abdomen || 'Plano, blando, depresible, no doloroso a la palpación superficial ni profunda, ruidos peristálticos presentes normales, sin visceromegalias ni datos de irritación peritoneal.'}
   - Miembros: ${pe.miembros || 'Torácicos y pélvicos íntegros, simétricos, arcos de movilidad conservados, pulsos periféricos presentes de adecuada intensidad, sin edema y llenado capilar distal inmediato.'}
-  - Genitales: ${pe.genitales || 'Diferido'}
+  - Genitales: Diferido
 
 * Diagnóstico (CIE-10):
   ${data.diagnosticoCie10 || 'Z00.0 - Examen médico general (Chequeo general / Rutina)'}${data.diagnosticoSecundario ? `\n  ${data.diagnosticoSecundario}` : ''}
@@ -267,12 +268,13 @@ ${prescripts || '  - Sin prescripción farmacológica en esta consulta.'}`;
 export function generateModule3Text(data: EvolutionNoteData): string {
   const v = data.vitalSigns;
   const taDisplay = v?.taPediatricaBadge ? `${v.taPediatricaBadge}` : `${v?.taSistolica || '120'}/${v?.taDiastolica || '80'}`;
+  const spo2Display = v?.satO2 ? ` | SpO2: ${v.satO2}%` : ' | SpO2: 98%';
 
   return `* Diagnóstico de Seguimiento:
   ${data.diagnosticoSeguimiento || 'Seguimiento de consulta previa.'}
 
 * Signos Vitales Actuales:
-  Temp: ${v?.temp || '36.5'} °C | T/A: ${taDisplay} mmHg | FC: ${v?.fc || '75'} lpm | FR: ${v?.fr || '18'} rpm | Peso: ${v?.peso || '70.0'} kg | Talla: ${v?.talla || '1.70'} m | IMC: ${v?.imc || '24.22'} kg/m²
+  Temp: ${v?.temp || '36.5'} °C | T/A: ${taDisplay} mmHg | FC: ${v?.fc || '75'} lpm | FR: ${v?.fr || '18'} rpm${spo2Display} | Peso: ${v?.peso || '70.0'} kg | Talla: ${v?.talla || '1.70'} m | IMC: ${v?.imc || '24.22'} kg/m²
 
 * Evolución y Actualización del Cuadro Clínico:
   ${data.evolucionCuadroClinico || 'Paciente acude a revaloración médica. Refiere adecuada respuesta y tolerancia al tratamiento previo, con disminución progresiva de la sintomatología.'}

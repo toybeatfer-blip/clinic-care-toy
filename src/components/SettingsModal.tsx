@@ -12,7 +12,7 @@ interface SettingsModalProps {
 
 const COLOR_THEMES = [
   { id: 'sky', name: 'Azul SAC Clásico', class: 'bg-sky-600', textClass: 'text-sky-600', borderClass: 'border-sky-500', hex: '#0284c7' },
-  { id: 'emerald', name: 'Verde FABE Institucional', class: 'bg-emerald-600', textClass: 'text-emerald-600', borderClass: 'border-emerald-500', hex: '#059669' },
+  { id: 'emerald', name: 'Verde Médico Institucional', class: 'bg-emerald-600', textClass: 'text-emerald-600', borderClass: 'border-emerald-500', hex: '#059669' },
   { id: 'blue', name: 'Azul ALMUS Farmacia', class: 'bg-blue-600', textClass: 'text-blue-600', borderClass: 'border-blue-500', hex: '#2563eb' },
   { id: 'indigo', name: 'Índigo Quirúrgico Pro', class: 'bg-indigo-600', textClass: 'text-indigo-600', borderClass: 'border-indigo-500', hex: '#4f46e5' },
   { id: 'purple', name: 'Morado Salud Integral', class: 'bg-purple-600', textClass: 'text-purple-600', borderClass: 'border-purple-500', hex: '#9333ea' },

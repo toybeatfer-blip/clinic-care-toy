@@ -87,10 +87,10 @@ export function getInitialRecord(): ClinicalRecord {
         taPediatricaBadge: '',
         fc: '75',
         fr: '18',
+        satO2: '98',
         peso: '70.0',
         talla: '1.70',
         imc: '24.22',
-        satO2: '98',
         glucosa: ''
       },
       physicalExam: {
@@ -108,8 +108,8 @@ export function getInitialRecord(): ClinicalRecord {
       prescripcion: [
         {
           id: '1',
-          producto: 'Paracetamol 500 mg Tabletas (FABE)',
-          marcaInstitucional: 'FABE',
+          producto: 'Paracetamol 500 mg Tabletas',
+          marcaInstitucional: 'GENÉRICO',
           cantidad: '1 caja con 20 tabletas',
           via: 'Oral',
           dosis: 'Tomar 1 tableta (500 mg) cada 8 horas',
@@ -130,10 +130,10 @@ export function getInitialRecord(): ClinicalRecord {
         taPediatricaBadge: '',
         fc: '74',
         fr: '18',
+        satO2: '98',
         peso: '70.0',
         talla: '1.70',
         imc: '24.22',
-        satO2: '98',
         glucosa: ''
       }
     },

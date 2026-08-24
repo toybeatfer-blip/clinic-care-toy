@@ -1,11 +1,11 @@
 import { InstitutionalMed } from '../types';
 
 export const MEDICATION_CATALOG: InstitutionalMed[] = [
-  // Analgésicos y Antiinflamatorios (FABE / ALMUS)
+  // Analgésicos y Antiinflamatorios
   {
-    name: 'Paracetamol 500 mg Tabletas (FABE)',
+    name: 'Paracetamol 500 mg Tabletas',
     substance: 'Paracetamol',
-    brand: 'FABE',
+    brand: 'GENÉRICO',
     presentation: 'Caja con 20 tabletas de 500 mg',
     category: 'Analgésico / Antipirético',
     defaultDose: 'Tomar 1 tableta cada 8 horas por 3 a 5 días en caso de dolor o fiebre.'
@@ -19,9 +19,9 @@ export const MEDICATION_CATALOG: InstitutionalMed[] = [
     defaultDose: 'Tomar 1 tableta cada 8 horas por 3 a 5 días.'
   },
   {
-    name: 'Ibuprofeno 400 mg Grageas (FABE)',
+    name: 'Ibuprofeno 400 mg Grageas',
     substance: 'Ibuprofeno',
-    brand: 'FABE',
+    brand: 'GENÉRICO',
     presentation: 'Caja con 10 grageas de 400 mg',
     category: 'AINE / Antiinflamatorio',
     defaultDose: 'Tomar 1 gragea cada 8 horas después de los alimentos por 5 días.'
@@ -35,9 +35,9 @@ export const MEDICATION_CATALOG: InstitutionalMed[] = [
     defaultDose: 'Tomar 1 tableta cada 12 horas con alimentos por 5 días.'
   },
   {
-    name: 'Ketorolaco 10 mg Tabletas Sublinguales (FABE)',
+    name: 'Ketorolaco 10 mg Tabletas Sublinguales',
     substance: 'Ketorolaco trometamina',
-    brand: 'FABE',
+    brand: 'GENÉRICO',
     presentation: 'Caja con 4 tabletas sublinguales de 10 mg',
     category: 'AINE / Analgésico Potente',
     defaultDose: 'Disolver 1 tableta debajo de la lengua cada 8 horas por máximo 4 días.'
@@ -51,9 +51,9 @@ export const MEDICATION_CATALOG: InstitutionalMed[] = [
     defaultDose: 'Aplicar 1 ampolleta vía intramuscular profunda en dosis única o cada 12 horas por 2 días.'
   },
   {
-    name: 'Naproxeno / Paracetamol 275 mg / 300 mg Tabletas (FABE)',
+    name: 'Naproxeno / Paracetamol 275 mg / 300 mg Tabletas',
     substance: 'Naproxeno sódico / Paracetamol',
-    brand: 'FABE',
+    brand: 'GENÉRICO',
     presentation: 'Caja con 16 tabletas',
     category: 'Analgésico / Antiinflamatorio',
     defaultDose: 'Tomar 1 tableta cada 8 horas con alimentos por 5 días.'
@@ -67,19 +67,19 @@ export const MEDICATION_CATALOG: InstitutionalMed[] = [
     defaultDose: 'Tomar 1 cápsula cada 24 horas después de la comida por 5 a 7 días.'
   },
   {
-    name: 'Metamizol Sódico 500 mg Tabletas (FABE)',
+    name: 'Metamizol Sódico 500 mg Tabletas',
     substance: 'Metamizol sódico (Dipirona)',
-    brand: 'FABE',
+    brand: 'GENÉRICO',
     presentation: 'Caja con 10 tabletas de 500 mg',
     category: 'Antipirético / Analgésico',
     defaultDose: 'Tomar 1 tableta cada 8 horas en caso de fiebre o dolor moderado.'
   },
 
-  // Antibióticos (FABE / ALMUS)
+  // Antibióticos
   {
-    name: 'Amoxicilina 500 mg Cápsulas (FABE)',
+    name: 'Amoxicilina 500 mg Cápsulas',
     substance: 'Amoxicilina trihidratada',
-    brand: 'FABE',
+    brand: 'GENÉRICO',
     presentation: 'Caja con 12 cápsulas de 500 mg',
     category: 'Antibiótico / Penicilinas',
     defaultDose: 'Tomar 1 cápsula cada 8 horas por 7 días continuos.'
@@ -93,9 +93,9 @@ export const MEDICATION_CATALOG: InstitutionalMed[] = [
     defaultDose: 'Tomar 1 tableta cada 8 horas al inicio de las comidas por 7 a 10 días.'
   },
   {
-    name: 'Amoxicilina / Ácido Clavulánico 875 mg / 125 mg Tabletas (FABE)',
+    name: 'Amoxicilina / Ácido Clavulánico 875 mg / 125 mg Tabletas',
     substance: 'Amoxicilina / Clavulanato',
-    brand: 'FABE',
+    brand: 'GENÉRICO',
     presentation: 'Caja con 14 tabletas',
     category: 'Antibiótico / Betalactámico + Inhibidor',
     defaultDose: 'Tomar 1 tableta cada 12 horas con alimentos por 7 días.'
@@ -109,9 +109,9 @@ export const MEDICATION_CATALOG: InstitutionalMed[] = [
     defaultDose: 'Tomar 1 tableta cada 24 horas 1 hora antes de los alimentos por 3 días.'
   },
   {
-    name: 'Ciprofloxacino 500 mg Tabletas (FABE)',
+    name: 'Ciprofloxacino 500 mg Tabletas',
     substance: 'Ciprofloxacino clorhidrato',
-    brand: 'FABE',
+    brand: 'GENÉRICO',
     presentation: 'Caja con 8 tabletas de 500 mg',
     category: 'Antibiótico / Fluoroquinolona',
     defaultDose: 'Tomar 1 tableta cada 12 horas con abundante agua por 5 a 7 días.'
@@ -125,9 +125,9 @@ export const MEDICATION_CATALOG: InstitutionalMed[] = [
     defaultDose: 'Aplicar 1 frasco ámpula vía intramuscular profunda cada 24 horas por 3 días.'
   },
   {
-    name: 'Trimetoprima / Sulfametoxazol 160 mg / 800 mg Tabletas (FABE)',
+    name: 'Trimetoprima / Sulfametoxazol 160 mg / 800 mg Tabletas',
     substance: 'Trimetoprima / Sulfametoxazol',
-    brand: 'FABE',
+    brand: 'GENÉRICO',
     presentation: 'Caja con 14 tabletas',
     category: 'Antibiótico / Sulfamidas',
     defaultDose: 'Tomar 1 tableta cada 12 horas después de los alimentos por 7 días.'
@@ -141,11 +141,11 @@ export const MEDICATION_CATALOG: InstitutionalMed[] = [
     defaultDose: 'Tomar 1 cápsula cada 6 horas con alimentos por 7 días.'
   },
 
-  // Gastrointestinales (FABE / ALMUS)
+  // Gastrointestinales
   {
-    name: 'Omeprazol 20 mg Cápsulas (FABE)',
+    name: 'Omeprazol 20 mg Cápsulas',
     substance: 'Omeprazol',
-    brand: 'FABE',
+    brand: 'GENÉRICO',
     presentation: 'Frasco con 30 cápsulas de 20 mg',
     category: 'Gastrointestinal / IBP',
     defaultDose: 'Tomar 1 cápsula en ayunas 30 minutos antes del desayuno por 14 a 28 días.'
@@ -159,9 +159,9 @@ export const MEDICATION_CATALOG: InstitutionalMed[] = [
     defaultDose: 'Tomar 1 gragea en ayunas por las mañanas por 14 días.'
   },
   {
-    name: 'Butilhioscina 10 mg Grageas (FABE)',
+    name: 'Butilhioscina 10 mg Grageas',
     substance: 'Butilhioscina (Bromuro de Hioscina)',
-    brand: 'FABE',
+    brand: 'GENÉRICO',
     presentation: 'Caja con 10 grageas de 10 mg',
     category: 'Antiespasmódico',
     defaultDose: 'Tomar 1 gragea cada 8 horas en caso de cólico o dolor abdominal.'
@@ -175,9 +175,9 @@ export const MEDICATION_CATALOG: InstitutionalMed[] = [
     defaultDose: 'Tomar 1 tableta 15 minutos antes de los alimentos cada 8 horas por 3 días.'
   },
   {
-    name: 'Difenidol 25 mg Tabletas (FABE)',
+    name: 'Difenidol 25 mg Tabletas',
     substance: 'Difenidol clorhidrato',
-    brand: 'FABE',
+    brand: 'GENÉRICO',
     presentation: 'Caja con 30 tabletas de 25 mg',
     category: 'Antivertiginoso / Antiemético',
     defaultDose: 'Tomar 1 tableta cada 8 horas en caso de náusea, vómito o mareo.'
@@ -191,19 +191,19 @@ export const MEDICATION_CATALOG: InstitutionalMed[] = [
     defaultDose: 'Tomar 2 tabletas como dosis inicial y después 1 tableta tras cada evacuación líquida (máximo 4 al día).'
   },
   {
-    name: 'Gel Hidróxido de Aluminio y Magnesio con Dimeticona (FABE)',
+    name: 'Gel Hidróxido de Aluminio y Magnesio con Dimeticona',
     substance: 'Aluminio / Magnesio / Dimeticona',
-    brand: 'FABE',
+    brand: 'GENÉRICO',
     presentation: 'Frasco con suspensión 240 ml',
     category: 'Antiácido',
     defaultDose: 'Tomar 1 cucharada (10 ml) 1 hora después de las comidas y antes de acostarse.'
   },
 
-  // Antihistamínicos y Respiratorios (FABE / ALMUS)
+  // Antihistamínicos y Respiratorios
   {
-    name: 'Loratadina 10 mg Tabletas (FABE)',
+    name: 'Loratadina 10 mg Tabletas',
     substance: 'Loratadina',
-    brand: 'FABE',
+    brand: 'GENÉRICO',
     presentation: 'Caja con 10 tabletas de 10 mg',
     category: 'Antihistamínico',
     defaultDose: 'Tomar 1 tableta cada 24 horas por la noche por 7 días.'
@@ -217,17 +217,17 @@ export const MEDICATION_CATALOG: InstitutionalMed[] = [
     defaultDose: 'Tomar 1 tableta cada 24 horas por las noches por 7 a 10 días.'
   },
   {
-    name: 'Clorfenamina Compuesta Tabletas (FABE)',
+    name: 'Clorfenamina Compuesta Tabletas',
     substance: 'Paracetamol / Cafeína / Fenilefrina / Clorfenamina',
-    brand: 'FABE',
+    brand: 'GENÉRICO',
     presentation: 'Caja con 10 tabletas antigripales',
     category: 'Antigripal',
     defaultDose: 'Tomar 1 tableta cada 8 horas por 3 a 5 días.'
   },
   {
-    name: 'Ambroxol 30 mg / 5 ml Jarabe Adulto (FABE)',
+    name: 'Ambroxol 30 mg / 5 ml Jarabe Adulto',
     substance: 'Ambroxol clorhidrato',
-    brand: 'FABE',
+    brand: 'GENÉRICO',
     presentation: 'Frasco con jarabe 120 ml',
     category: 'Mucolítico / Expectorante',
     defaultDose: 'Tomar 1 cucharada (10 ml) cada 8 horas después de los alimentos por 5 días.'
@@ -243,9 +243,9 @@ export const MEDICATION_CATALOG: InstitutionalMed[] = [
 
   // Crónico Degenerativos (Cardio / Diabetes / Lípidos)
   {
-    name: 'Losartán 50 mg Tabletas (FABE)',
+    name: 'Losartán 50 mg Tabletas',
     substance: 'Losartán potásico',
-    brand: 'FABE',
+    brand: 'GENÉRICO',
     presentation: 'Caja con 30 tabletas de 50 mg',
     category: 'Antihipertensivo / ARA-II',
     defaultDose: 'Tomar 1 tableta cada 24 horas por la mañana de forma continua.'
@@ -259,9 +259,9 @@ export const MEDICATION_CATALOG: InstitutionalMed[] = [
     defaultDose: 'Tomar 1 tableta cada 24 horas por la mañana.'
   },
   {
-    name: 'Amlodipino 5 mg Tabletas (FABE)',
+    name: 'Amlodipino 5 mg Tabletas',
     substance: 'Amlodipino besilato',
-    brand: 'FABE',
+    brand: 'GENÉRICO',
     presentation: 'Caja con 30 tabletas de 5 mg',
     category: 'Antihipertensivo / Calcioantagonista',
     defaultDose: 'Tomar 1 tableta cada 24 horas.'
@@ -275,9 +275,9 @@ export const MEDICATION_CATALOG: InstitutionalMed[] = [
     defaultDose: 'Tomar 1 tableta con el desayuno de forma diaria.'
   },
   {
-    name: 'Atorvastatina 20 mg Tabletas (FABE)',
+    name: 'Atorvastatina 20 mg Tabletas',
     substance: 'Atorvastatina cálcica',
-    brand: 'FABE',
+    brand: 'GENÉRICO',
     presentation: 'Caja con 30 tabletas de 20 mg',
     category: 'Hipolipemiante / Estatina',
     defaultDose: 'Tomar 1 tableta por la noche antes de dormir por 30 días.'

@@ -127,16 +127,17 @@ export const PrintableNoteModal: React.FC<PrintableNoteModalProps> = ({
             </div>
           </div>
 
-          {/* Vital Signs Bar */}
+          {/* Vital Signs Bar with SpO2 */}
           <div className="border border-slate-300 rounded-lg p-3 text-xs bg-slate-50">
             <span className="font-bold text-slate-700 block mb-1 uppercase tracking-wider text-[10px]">
               Somatometría y Signos Vitales:
             </span>
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 font-mono">
+            <div className="grid grid-cols-3 sm:grid-cols-7 gap-2 font-mono">
               <div>Temp: <strong>{v.temp}°C</strong></div>
               <div>T/A: <strong>{v.taPediatricaBadge || `${v.taSistolica}/${v.taDiastolica}`}</strong></div>
               <div>FC: <strong>{v.fc} lpm</strong></div>
               <div>FR: <strong>{v.fr} rpm</strong></div>
+              <div>SpO2: <strong>{v.satO2 || '98'}%</strong></div>
               <div>Peso: <strong>{v.peso} kg</strong></div>
               <div>Talla: <strong>{v.talla} m (IMC: {v.imc})</strong></div>
             </div>

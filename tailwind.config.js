@@ -17,7 +17,7 @@ export default {
           700: '#075985',
           800: '#0c4a6e',
           900: '#082f49',
-          fabe: '#059669', // institucional verde
+          emerald: '#059669', // institucional verde
           almus: '#2563eb', // institucional azul
           alert: '#dc2626',
         }
