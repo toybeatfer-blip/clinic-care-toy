@@ -6,6 +6,7 @@ export const SUPERADMIN_PASS = 'Bazzoka1313AS.';
 const MASTER_CLINICS_KEY = 'clinic_care_clinics_master_v2';
 const SESSION_KEY = 'clinic_care_session_v2';
 const ADMIN_CONTACT_KEY = 'clinic_care_admin_contact_v2';
+export const ADMIN_CONTACT_EVENT = 'clinic_care_admin_contact_updated_v2';
 
 // 1. DATOS DE CONTACTO DEL ADMINISTRADOR
 export function getAdminContactInfo(): AdminContactInfo {
@@ -26,6 +27,10 @@ export function getAdminContactInfo(): AdminContactInfo {
 export function saveAdminContactInfo(info: AdminContactInfo): void {
   try {
     localStorage.setItem(ADMIN_CONTACT_KEY, JSON.stringify(info));
+    // Disparar evento para actualización en tiempo real en toda la aplicación
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent(ADMIN_CONTACT_EVENT, { detail: info }));
+    }
   } catch (e) {
     console.error('Error saving admin contact info', e);
   }

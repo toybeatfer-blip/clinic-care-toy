@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, UserCog, Phone, Mail, MessageSquare, Check, ShieldCheck } from 'lucide-react';
 import { AdminContactInfo } from '../types';
 import { getAdminContactInfo, saveAdminContactInfo } from '../utils/authStorage';
@@ -17,17 +17,26 @@ export const AdminContactModal: React.FC<AdminContactModalProps> = ({
   const [contactData, setContactData] = useState<AdminContactInfo>(getAdminContactInfo());
   const [isSaved, setIsSaved] = useState(false);
 
+  // Cada vez que se abre el modal, cargar los datos más recientes
+  useEffect(() => {
+    if (isOpen) {
+      setContactData(getAdminContactInfo());
+      setIsSaved(false);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // Guarda en localStorage y emite el evento global en tiempo real
     saveAdminContactInfo(contactData);
     if (onSaved) onSaved(contactData);
     setIsSaved(true);
     setTimeout(() => {
       setIsSaved(false);
       onClose();
-    }, 1200);
+    }, 1000);
   };
 
   return (
@@ -42,7 +51,7 @@ export const AdminContactModal: React.FC<AdminContactModalProps> = ({
             </div>
             <div>
               <h3 className="font-bold text-base text-white">Datos de Contacto del Administrador</h3>
-              <p className="text-xs text-slate-400">Información visible para consultorios con licencia suspendida o vencida</p>
+              <p className="text-xs text-slate-400">Actualización automática e instantánea en todo el sistema</p>
             </div>
           </div>
           <button
@@ -118,7 +127,7 @@ export const AdminContactModal: React.FC<AdminContactModalProps> = ({
 
           <div className="pt-3 border-t border-slate-800 flex items-center justify-between">
             <span className="text-[11px] text-slate-400">
-              {isSaved && <span className="text-emerald-400 font-bold">¡Datos de contacto actualizados!</span>}
+              {isSaved && <span className="text-emerald-400 font-bold">¡Datos actualizados automáticamente en vivo!</span>}
             </span>
 
             <div className="flex items-center gap-2">
@@ -134,7 +143,7 @@ export const AdminContactModal: React.FC<AdminContactModalProps> = ({
                 className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold shadow-lg shadow-amber-500/20 flex items-center gap-1.5 transition-all"
               >
                 <Check className="w-4 h-4" />
-                <span>Guardar Contacto</span>
+                <span>Guardar y Aplicar</span>
               </button>
             </div>
           </div>

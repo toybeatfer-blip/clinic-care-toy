@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, ShieldAlert, Phone, Mail, MessageCircle, ExternalLink, HelpCircle } from 'lucide-react';
-import { getAdminContactInfo } from '../utils/authStorage';
+import { getAdminContactInfo, ADMIN_CONTACT_EVENT } from '../utils/authStorage';
+import { AdminContactInfo } from '../types';
 
 interface SuspendedLicenseNoticeModalProps {
   isOpen: boolean;
@@ -15,9 +16,36 @@ export const SuspendedLicenseNoticeModal: React.FC<SuspendedLicenseNoticeModalPr
   customError,
   isSuspended = false
 }) => {
+  const [admin, setAdmin] = useState<AdminContactInfo>(getAdminContactInfo());
+
+  // Actualización automática e instantánea cuando el administrador guarde cambios
+  useEffect(() => {
+    const handleContactUpdate = (e: any) => {
+      if (e.detail) {
+        setAdmin(e.detail);
+      } else {
+        setAdmin(getAdminContactInfo());
+      }
+    };
+
+    window.addEventListener(ADMIN_CONTACT_EVENT, handleContactUpdate);
+    window.addEventListener('storage', handleContactUpdate);
+
+    return () => {
+      window.removeEventListener(ADMIN_CONTACT_EVENT, handleContactUpdate);
+      window.removeEventListener('storage', handleContactUpdate);
+    };
+  }, []);
+
+  // Actualizar datos cada vez que se abre la ventana
+  useEffect(() => {
+    if (isOpen) {
+      setAdmin(getAdminContactInfo());
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
-  const admin = getAdminContactInfo();
   const cleanPhone = admin.phoneWhatsApp.replace(/\D/g, '');
   const waUrl = `https://wa.me/${cleanPhone.startsWith('52') ? cleanPhone : `52${cleanPhone}`}?text=${encodeURIComponent('Hola Fernando, me comunico respecto a la licencia de mi consultorio en CLINIC CARE TOY para renovación / reactivación.')}`;
   const mailUrl = `mailto:${admin.email}?subject=${encodeURIComponent('Solicitud de Renovación / Reactivación de Licencia - CLINIC CARE TOY')}&body=${encodeURIComponent('Hola Fernando,\n\nSolicito apoyo para la renovación o reactivación de licencia de mi consultorio.\n\nNombre de la clínica / médico:\nUsuario:\nTeléfono de contacto:')}`;
@@ -37,7 +65,7 @@ export const SuspendedLicenseNoticeModal: React.FC<SuspendedLicenseNoticeModalPr
                 {isSuspended ? 'Licencia Suspendida' : 'Renovación de Licencia'}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Contacto con el Administrador del Sistema
+                Contacto con el Administrador ({admin.adminName})
               </p>
             </div>
           </div>
@@ -82,7 +110,7 @@ export const SuspendedLicenseNoticeModal: React.FC<SuspendedLicenseNoticeModalPr
                   <MessageCircle className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="text-xs">Enviar WhatsApp al Administrador</div>
+                  <div className="text-xs">Enviar WhatsApp a {admin.adminName}</div>
                   <div className="text-[11px] font-mono text-emerald-700 dark:text-emerald-400 font-normal">
                     {admin.phoneWhatsApp}
                   </div>

@@ -56,7 +56,20 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   const [noticeCustomError, setNoticeCustomError] = useState('');
   const [isSuspendedState, setIsSuspendedState] = useState(false);
 
-  const adminInfo = getAdminContactInfo();
+  const [adminInfo, setAdminInfo] = useState(getAdminContactInfo());
+
+  // Actualización automática cuando el administrador cambie sus datos
+  useEffect(() => {
+    const handleUpdate = () => {
+      setAdminInfo(getAdminContactInfo());
+    };
+    window.addEventListener('clinic_care_admin_contact_updated_v2', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    return () => {
+      window.removeEventListener('clinic_care_admin_contact_updated_v2', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
+  }, []);
 
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
