@@ -100,7 +100,7 @@ export const Module2HistoryCheckup: React.FC<Module2HistoryCheckupProps> = ({
   ).slice(0, 8);
 
   const fullModuleText = generateModule2Text(data);
-  const imcInfo = calculateIMC(data.vitalSigns.peso, data.vitalSigns.talla);
+  const imcInfo = calculateIMC(data?.vitalSigns?.peso, data?.vitalSigns?.talla);
 
   return (
     <div className="space-y-6">

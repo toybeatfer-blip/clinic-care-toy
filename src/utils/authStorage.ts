@@ -12,7 +12,17 @@ export const ADMIN_CONTACT_EVENT = 'clinic_care_admin_contact_updated_v2';
 export function getAdminContactInfo(): AdminContactInfo {
   try {
     const raw = localStorage.getItem(ADMIN_CONTACT_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        return {
+          adminName: parsed.adminName || 'Fernando (Super Administrador)',
+          phoneWhatsApp: parsed.phoneWhatsApp || '55 1234 5678',
+          email: parsed.email || 'toybeatfer@gmail.com',
+          helpMessage: parsed.helpMessage || 'Para renovar tu licencia mensual o resolver dudas sobre tu cuenta de consultorio, comunícate directamente con el administrador del sistema.'
+        };
+      }
+    }
   } catch (e) {
     console.error('Error loading admin contact info', e);
   }
@@ -27,7 +37,6 @@ export function getAdminContactInfo(): AdminContactInfo {
 export function saveAdminContactInfo(info: AdminContactInfo): void {
   try {
     localStorage.setItem(ADMIN_CONTACT_KEY, JSON.stringify(info));
-    // Disparar evento para actualización en tiempo real en toda la aplicación
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent(ADMIN_CONTACT_EVENT, { detail: info }));
     }
@@ -37,25 +46,37 @@ export function saveAdminContactInfo(info: AdminContactInfo): void {
 }
 
 // 2. GESTIÓN DE VENCIMIENTO Y DÍAS RESTANTES (1 MES DE DURACIÓN)
-export function getDaysRemaining(validUntil: string): { days: number; isExpired: boolean; label: string } {
-  if (!validUntil || validUntil === 'Indefinida') {
+export function getDaysRemaining(validUntil?: string | null): { days: number; isExpired: boolean; label: string } {
+  if (!validUntil || validUntil === 'Indefinida' || typeof validUntil !== 'string') {
     return { days: 9999, isExpired: false, label: 'Licencia Permanente' };
   }
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  try {
+    const parts = validUntil.split('-');
+    if (parts.length !== 3) {
+      return { days: 9999, isExpired: false, label: 'Licencia Activa' };
+    }
 
-  const [year, month, day] = validUntil.split('-').map(Number);
-  const expDate = new Date(year, month - 1, day, 23, 59, 59);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-  const diffTime = expDate.getTime() - today.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const [year, month, day] = parts.map(Number);
+    if (isNaN(year) || isNaN(month) || isNaN(day)) {
+      return { days: 9999, isExpired: false, label: 'Licencia Activa' };
+    }
 
-  if (diffDays <= 0) {
-    return { days: diffDays, isExpired: true, label: `Vencida (${Math.abs(diffDays)} días)` };
+    const expDate = new Date(year, month - 1, day, 23, 59, 59);
+    const diffTime = expDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays <= 0) {
+      return { days: diffDays, isExpired: true, label: `Vencida (${Math.abs(diffDays)} días)` };
+    }
+
+    return { days: diffDays, isExpired: false, label: `${diffDays} día${diffDays > 1 ? 's' : ''} restante${diffDays > 1 ? 's' : ''}` };
+  } catch (err) {
+    return { days: 9999, isExpired: false, label: 'Licencia Activa' };
   }
-
-  return { days: diffDays, isExpired: false, label: `${diffDays} día${diffDays > 1 ? 's' : ''} restante${diffDays > 1 ? 's' : ''}` };
 }
 
 // 3. GESTIÓN DE SESIÓN
@@ -63,7 +84,11 @@ export function getCurrentSession(): SessionUser | null {
   try {
     const raw = localStorage.getItem(SESSION_KEY);
     if (!raw) return null;
-    return JSON.parse(raw);
+    const session = JSON.parse(raw);
+    if (session && typeof session === 'object' && session.type) {
+      return session;
+    }
+    return null;
   } catch (e) {
     console.error('Error reading session', e);
     return null;
@@ -91,15 +116,34 @@ export function getAllClinics(): ClinicAccount[] {
   try {
     const raw = localStorage.getItem(MASTER_CLINICS_KEY);
     if (!raw) return [];
-    const list: ClinicAccount[] = JSON.parse(raw);
+    const list = JSON.parse(raw);
+    if (!Array.isArray(list)) return [];
     
-    // Auto-evaluar vencimientos al listar
-    return list.map(c => {
+    return list.map((c: any) => {
       const remaining = getDaysRemaining(c.licenseValidUntil);
-      if (remaining.isExpired && c.licenseStatus === 'active') {
-        return { ...c, licenseStatus: 'expired' };
-      }
-      return c;
+      const isExpired = remaining.isExpired;
+      return {
+        id: c.id || String(Math.random()),
+        clinicName: c.clinicName || 'Consultorio Médico',
+        username: c.username || '',
+        passwordPlain: c.passwordPlain || '',
+        doctorName: c.doctorName || '',
+        prefix: c.prefix || 'Dr.',
+        cedulaGeneral: c.cedulaGeneral || '',
+        cedulaEspecialidad: c.cedulaEspecialidad || '',
+        especialidad: c.especialidad || 'Medicina General',
+        universidad: c.universidad || '',
+        telefono: c.telefono || '',
+        correo: c.correo || '',
+        direccion: c.direccion || '',
+        sucursal: c.sucursal || '',
+        logoUrl: c.logoUrl || '',
+        primaryColor: c.primaryColor || 'sky',
+        createdAt: c.createdAt || new Date().toISOString(),
+        lastLoginAt: c.lastLoginAt || new Date().toISOString(),
+        licenseStatus: (isExpired && c.licenseStatus === 'active') ? 'expired' : (c.licenseStatus || 'active'),
+        licenseValidUntil: c.licenseValidUntil || 'Indefinida'
+      };
     });
   } catch (e) {
     console.error('Error loading clinics', e);
@@ -117,7 +161,11 @@ export function saveAllClinics(clinics: ClinicAccount[]): void {
 
 export function registerClinic(data: Omit<ClinicAccount, 'id' | 'createdAt' | 'lastLoginAt' | 'licenseStatus' | 'licenseValidUntil'>): { success: boolean; clinic?: ClinicAccount; error?: string } {
   const clinics = getAllClinics();
-  const normalizedUser = data.username.trim().toLowerCase();
+  const normalizedUser = (data.username || '').trim().toLowerCase();
+
+  if (!normalizedUser) {
+    return { success: false, error: 'Ingresa un nombre de usuario válido.' };
+  }
 
   if (normalizedUser === SUPERADMIN_USER.toLowerCase()) {
     return { success: false, error: 'El nombre de usuario no está disponible.' };
@@ -146,7 +194,6 @@ export function registerClinic(data: Omit<ClinicAccount, 'id' | 'createdAt' | 'l
   const updatedClinics = [newClinic, ...clinics];
   saveAllClinics(updatedClinics);
 
-  // Inicializar base de datos del consultorio vacía y configuración
   initClinicDatabase(newClinic);
 
   return { success: true, clinic: newClinic };
@@ -199,7 +246,6 @@ export function setClinicLicense(clinicId: string, status: LicenseStatus, validU
   });
 }
 
-// Renovar licencia agregando días (por ejemplo 30 días para 1 mes más)
 export function renewClinicLicense(clinicId: string, daysToAdd: number = 30): ClinicAccount[] {
   const clinics = getAllClinics();
   const target = clinics.find(c => c.id === clinicId);
@@ -207,10 +253,12 @@ export function renewClinicLicense(clinicId: string, daysToAdd: number = 30): Cl
 
   let baseDate = new Date();
   if (target.licenseValidUntil && target.licenseValidUntil !== 'Indefinida') {
-    const currentExp = new Date(target.licenseValidUntil + 'T23:59:59');
-    if (currentExp > baseDate) {
-      baseDate = currentExp;
-    }
+    try {
+      const currentExp = new Date(target.licenseValidUntil + 'T23:59:59');
+      if (!isNaN(currentExp.getTime()) && currentExp > baseDate) {
+        baseDate = currentExp;
+      }
+    } catch (e) {}
   }
 
   baseDate.setDate(baseDate.getDate() + daysToAdd);
@@ -224,8 +272,8 @@ export function renewClinicLicense(clinicId: string, daysToAdd: number = 30): Cl
 
 // 5. AUTENTICACIÓN
 export function authenticateUser(usernameInput: string, passwordInput: string): { success: boolean; session?: SessionUser; error?: string; isLicenseBlocked?: boolean } {
-  const user = usernameInput.trim();
-  const pass = passwordInput.trim();
+  const user = (usernameInput || '').trim();
+  const pass = (passwordInput || '').trim();
 
   // Super Admin Check
   if (user.toLowerCase() === SUPERADMIN_USER.toLowerCase() && pass === SUPERADMIN_PASS) {
@@ -249,7 +297,6 @@ export function authenticateUser(usernameInput: string, passwordInput: string): 
     return { success: false, error: 'Contraseña incorrecta para este consultorio.' };
   }
 
-  // Verificar vencimiento de licencia (1 mes)
   const remaining = getDaysRemaining(found.licenseValidUntil);
   if (remaining.isExpired) {
     updateClinic(found.id, { licenseStatus: 'expired' });
@@ -268,7 +315,6 @@ export function authenticateUser(usernameInput: string, passwordInput: string): 
     };
   }
 
-  // Actualizar última fecha de inicio de sesión
   updateClinic(found.id, { lastLoginAt: new Date().toISOString() });
 
   const session: SessionUser = {
@@ -282,7 +328,7 @@ export function authenticateUser(usernameInput: string, passwordInput: string): 
   return { success: true, session };
 }
 
-// 6. BASES DE DATOS AISLADAS POR CONSULTORIO (TOTALMENTE EN BLANCO)
+// 6. BASES DE DATOS AISLADAS POR CONSULTORIO (TOTALMENTE EN BLANCO Y SEGURAS)
 export function getBlankClinicalRecord(): ClinicalRecord {
   return {
     id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
@@ -381,6 +427,47 @@ export function getBlankClinicalRecord(): ClinicalRecord {
   };
 }
 
+export function deepMergeBlank(rawRecord: any): ClinicalRecord {
+  const blank = getBlankClinicalRecord();
+  if (!rawRecord || typeof rawRecord !== 'object') return blank;
+
+  return {
+    ...blank,
+    ...rawRecord,
+    identification: {
+      ...blank.identification,
+      ...(rawRecord.identification || {})
+    },
+    historyCheckup: {
+      ...blank.historyCheckup,
+      ...(rawRecord.historyCheckup || {}),
+      vitalSigns: {
+        ...blank.historyCheckup.vitalSigns,
+        ...(rawRecord.historyCheckup?.vitalSigns || {})
+      },
+      physicalExam: {
+        ...blank.historyCheckup.physicalExam,
+        ...(rawRecord.historyCheckup?.physicalExam || {})
+      },
+      prescripcion: Array.isArray(rawRecord.historyCheckup?.prescripcion)
+        ? rawRecord.historyCheckup.prescripcion
+        : []
+    },
+    evolutionNote: {
+      ...blank.evolutionNote,
+      ...(rawRecord.evolutionNote || {}),
+      vitalSigns: {
+        ...blank.evolutionNote.vitalSigns,
+        ...(rawRecord.evolutionNote?.vitalSigns || {})
+      }
+    },
+    procedure: {
+      ...blank.procedure,
+      ...(rawRecord.procedure || {})
+    }
+  };
+}
+
 export function initClinicDatabase(clinic: ClinicAccount): void {
   const recordsKey = `clinic_care_records_clinic_${clinic.id}_v2`;
   const settingsKey = `clinic_care_settings_clinic_${clinic.id}_v2`;
@@ -390,18 +477,18 @@ export function initClinicDatabase(clinic: ClinicAccount): void {
   }
 
   const doctorSettings: DoctorSettings = {
-    doctorName: clinic.doctorName,
-    prefix: clinic.prefix,
-    cedulaGeneral: clinic.cedulaGeneral,
+    doctorName: clinic.doctorName || '',
+    prefix: clinic.prefix || 'Dr.',
+    cedulaGeneral: clinic.cedulaGeneral || '',
     cedulaEspecialidad: clinic.cedulaEspecialidad || '',
-    especialidad: clinic.especialidad,
-    universidad: clinic.universidad,
-    telefonoContacto: clinic.telefono,
-    correoContacto: clinic.correo,
-    nombreClinica: clinic.clinicName,
-    sucursal: clinic.sucursal,
-    direccionClinica: clinic.direccion,
-    telefonoClinica: clinic.telefono,
+    especialidad: clinic.especialidad || 'Medicina General',
+    universidad: clinic.universidad || '',
+    telefonoContacto: clinic.telefono || '',
+    correoContacto: clinic.correo || '',
+    nombreClinica: clinic.clinicName || 'Consultorio Médico',
+    sucursal: clinic.sucursal || '',
+    direccionClinica: clinic.direccion || '',
+    telefonoClinica: clinic.telefono || '',
     logoUrl: clinic.logoUrl || '',
     primaryColor: clinic.primaryColor || 'sky'
   };
@@ -414,7 +501,9 @@ export function getClinicRecords(clinicId: string): ClinicalRecord[] {
   try {
     const raw = localStorage.getItem(`clinic_care_records_clinic_${clinicId}_v2`);
     if (!raw) return [];
-    return JSON.parse(raw);
+    const list = JSON.parse(raw);
+    if (!Array.isArray(list)) return [];
+    return list.map(item => deepMergeBlank(item));
   } catch (e) {
     console.error('Error loading clinic records', e);
     return [];
@@ -424,8 +513,9 @@ export function getClinicRecords(clinicId: string): ClinicalRecord[] {
 export function saveClinicRecord(clinicId: string, record: ClinicalRecord): ClinicalRecord[] {
   try {
     const records = getClinicRecords(clinicId);
-    const existingIndex = records.findIndex(r => r.id === record.id);
-    const updated = { ...record, updatedAt: new Date().toISOString() };
+    const safeRecord = deepMergeBlank(record);
+    const existingIndex = records.findIndex(r => r.id === safeRecord.id);
+    const updated = { ...safeRecord, updatedAt: new Date().toISOString() };
 
     let nextList: ClinicalRecord[];
     if (existingIndex >= 0) {
@@ -459,7 +549,27 @@ export function deleteClinicRecord(clinicId: string, recordId: string): Clinical
 export function getClinicSettings(clinicId: string): DoctorSettings {
   try {
     const raw = localStorage.getItem(`clinic_care_settings_clinic_${clinicId}_v2`);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        return {
+          doctorName: parsed.doctorName || '',
+          prefix: parsed.prefix || 'Dr.',
+          cedulaGeneral: parsed.cedulaGeneral || '',
+          cedulaEspecialidad: parsed.cedulaEspecialidad || '',
+          especialidad: parsed.especialidad || 'Medicina General',
+          universidad: parsed.universidad || '',
+          telefonoContacto: parsed.telefonoContacto || '',
+          correoContacto: parsed.correoContacto || '',
+          nombreClinica: parsed.nombreClinica || '',
+          sucursal: parsed.sucursal || '',
+          direccionClinica: parsed.direccionClinica || '',
+          telefonoClinica: parsed.telefonoClinica || '',
+          logoUrl: parsed.logoUrl || '',
+          primaryColor: parsed.primaryColor || 'sky'
+        };
+      }
+    }
   } catch (e) {
     console.error('Error reading clinic settings', e);
   }
@@ -507,7 +617,10 @@ export function saveClinicSettings(clinicId: string, settings: DoctorSettings): 
 export function getActiveClinicRecord(clinicId: string): ClinicalRecord {
   try {
     const raw = localStorage.getItem(`clinic_care_active_record_clinic_${clinicId}_v2`);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return deepMergeBlank(parsed);
+    }
   } catch (e) {
     console.error('Error reading active record', e);
   }

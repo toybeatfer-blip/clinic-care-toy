@@ -24,11 +24,12 @@ export const Module1Identification: React.FC<Module1IdentificationProps> = ({
   };
 
   // Anti-duplicity check: check if name + birth year already exists in database
-  const fullName = `${data.nombres} ${data.apellidoPaterno} ${data.apellidoMaterno}`.trim().toLowerCase();
-  const birthYear = data.fechaNacimiento ? data.fechaNacimiento.split(/[-/]/)[0] : '';
+  const fullName = `${data?.nombres || ''} ${data?.apellidoPaterno || ''} ${data?.apellidoMaterno || ''}`.trim().toLowerCase();
+  const birthYear = data?.fechaNacimiento ? data.fechaNacimiento.split(/[-/]/)[0] : '';
   
-  const duplicateMatch = savedRecords.find(r => {
-    const rName = `${r.identification.nombres} ${r.identification.apellidoPaterno} ${r.identification.apellidoMaterno}`.trim().toLowerCase();
+  const duplicateMatch = (savedRecords || []).find(r => {
+    if (!r || !r.identification) return false;
+    const rName = `${r.identification.nombres || ''} ${r.identification.apellidoPaterno || ''} ${r.identification.apellidoMaterno || ''}`.trim().toLowerCase();
     const rYear = r.identification.fechaNacimiento ? r.identification.fechaNacimiento.split(/[-/]/)[0] : '';
     return rName && fullName && rName === fullName && (birthYear ? rYear === birthYear : true);
   });

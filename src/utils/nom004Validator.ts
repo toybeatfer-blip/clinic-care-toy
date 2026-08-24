@@ -21,11 +21,12 @@ export const FORBIDDEN_ACRONYMS = [
   { regex: /\bSx\b/g, acronym: 'Sx', replacement: 'Síntomas' },
 ];
 
-export function validateAuditRules(record: ClinicalRecord): AuditIssue[] {
+export function validateAuditRules(record?: ClinicalRecord | null): AuditIssue[] {
   const issues: AuditIssue[] = [];
+  if (!record) return issues;
 
   // Módulo 1: Alta y Ficha de Identificación
-  const id = record.identification;
+  const id = record.identification || ({} as Partial<IdentificationData>);
   if (!id.nombres?.trim() || !id.apellidoPaterno?.trim()) {
     issues.push({
       field: 'Nombre del Paciente',
@@ -36,10 +37,10 @@ export function validateAuditRules(record: ClinicalRecord): AuditIssue[] {
   }
 
   // Verificar antecedentes no vacíos
-  const checkAntecedent = (val: string, name: string) => {
+  const checkAntecedent = (val?: string, name?: string) => {
     if (!val || val.trim() === '') {
       issues.push({
-        field: name,
+        field: name || 'Campo',
         module: 'Módulo 1',
         severity: 'warning',
         message: `El campo ${name} no puede quedar en blanco. Asentar "Interrogados y negados" o "Negados".`,
@@ -54,7 +55,10 @@ export function validateAuditRules(record: ClinicalRecord): AuditIssue[] {
   checkAntecedent(id.alergias, 'Alergias');
 
   // Módulo 2: Historia Clínica
-  const hc = record.historyCheckup;
+  const hc = record.historyCheckup || ({} as Partial<HistoryCheckupData>);
+  const vs = hc.vitalSigns || ({} as any);
+  const pe = hc.physicalExam || ({} as any);
+
   if (!hc.padecimientoActual?.trim()) {
     issues.push({
       field: 'Padecimiento Actual',
@@ -76,8 +80,8 @@ export function validateAuditRules(record: ClinicalRecord): AuditIssue[] {
   }
 
   // Somatometría: Talla en metros con punto decimal
-  const tallaNum = parseFloat(hc.vitalSigns.talla);
-  if (tallaNum > 3.0) {
+  const tallaNum = parseFloat(vs?.talla || '');
+  if (!isNaN(tallaNum) && tallaNum > 3.0) {
     issues.push({
       field: 'Talla / Estatura',
       module: 'Módulo 2',
@@ -88,7 +92,7 @@ export function validateAuditRules(record: ClinicalRecord): AuditIssue[] {
   }
 
   // Exploración genitales
-  if (hc.physicalExam.genitales && !/diferido|no explorado/i.test(hc.physicalExam.genitales)) {
+  if (pe?.genitales && !/diferido|no explorado/i.test(pe.genitales)) {
     issues.push({
       field: 'Exploración Genitales',
       module: 'Módulo 2',
@@ -108,23 +112,26 @@ export function validateAuditRules(record: ClinicalRecord): AuditIssue[] {
   }
 
   // Revisión de siglas prohibidas en todos los textos de redacción
+  const evo = record.evolutionNote || ({} as Partial<EvolutionNoteData>);
+  const proc = record.procedure || ({} as Partial<ProcedureData>);
+
   const textFieldsToCheck = [
     { text: hc.padecimientoActual, name: 'Padecimiento Actual', mod: 'Módulo 2' },
     { text: hc.interrogatorioAparatos, name: 'Interrogatorio', mod: 'Módulo 2' },
-    { text: hc.physicalExam.habitusExterior, name: 'Habitus Exterior', mod: 'Módulo 2' },
-    { text: hc.physicalExam.cabezaCuello, name: 'Cabeza / Cuello', mod: 'Módulo 2' },
-    { text: hc.physicalExam.torax, name: 'Tórax', mod: 'Módulo 2' },
-    { text: hc.physicalExam.abdomen, name: 'Abdomen', mod: 'Módulo 2' },
-    { text: hc.physicalExam.miembros, name: 'Miembros', mod: 'Módulo 2' },
+    { text: pe.habitusExterior, name: 'Habitus Exterior', mod: 'Módulo 2' },
+    { text: pe.cabezaCuello, name: 'Cabeza / Cuello', mod: 'Módulo 2' },
+    { text: pe.torax, name: 'Tórax', mod: 'Módulo 2' },
+    { text: pe.abdomen, name: 'Abdomen', mod: 'Módulo 2' },
+    { text: pe.miembros, name: 'Miembros', mod: 'Módulo 2' },
     { text: hc.indicacionTerapeutica, name: 'Indicación Terapéutica', mod: 'Módulo 2' },
-    { text: record.evolutionNote.evolucionCuadroClinico, name: 'Evolución Clínica', mod: 'Módulo 3' },
-    { text: record.procedure.observacionesObligatorias, name: 'Observaciones de Procedimiento', mod: 'Módulo 4' }
+    { text: evo.evolucionCuadroClinico, name: 'Evolución Clínica', mod: 'Módulo 3' },
+    { text: proc.observacionesObligatorias, name: 'Observaciones de Procedimiento', mod: 'Módulo 4' }
   ];
 
   textFieldsToCheck.forEach(item => {
     if (!item.text) return;
     FORBIDDEN_ACRONYMS.forEach(rule => {
-      if (rule.regex.test(item.text)) {
+      if (rule.regex.test(item.text!)) {
         issues.push({
           field: item.name,
           module: item.mod,
@@ -141,7 +148,7 @@ export function validateAuditRules(record: ClinicalRecord): AuditIssue[] {
   return issues;
 }
 
-export function cleanForbiddenAcronyms(text: string): string {
+export function cleanForbiddenAcronyms(text?: string): string {
   if (!text) return '';
   let cleaned = text;
   FORBIDDEN_ACRONYMS.forEach(rule => {
@@ -150,11 +157,11 @@ export function cleanForbiddenAcronyms(text: string): string {
   return cleaned;
 }
 
-export function calculateIMC(pesoKg: string | number, tallaMts: string | number): { imc: string; category: string; alertControlled: boolean } {
-  let peso = typeof pesoKg === 'string' ? parseFloat(pesoKg) : pesoKg;
-  let talla = typeof tallaMts === 'string' ? parseFloat(tallaMts) : tallaMts;
+export function calculateIMC(pesoKg?: string | number, tallaMts?: string | number): { imc: string; category: string; alertControlled: boolean } {
+  let peso = typeof pesoKg === 'string' ? parseFloat(pesoKg) : (pesoKg || 0);
+  let talla = typeof tallaMts === 'string' ? parseFloat(tallaMts) : (tallaMts || 0);
 
-  if (!peso || !talla || talla <= 0 || peso <= 0) {
+  if (isNaN(peso) || isNaN(talla) || !peso || !talla || talla <= 0 || peso <= 0) {
     return { imc: '', category: '', alertControlled: false };
   }
 
@@ -164,6 +171,10 @@ export function calculateIMC(pesoKg: string | number, tallaMts: string | number)
   }
 
   const imcVal = peso / (talla * talla);
+  if (isNaN(imcVal) || !isFinite(imcVal)) {
+    return { imc: '', category: '', alertControlled: false };
+  }
+
   const imcStr = imcVal.toFixed(2);
 
   let category = '';
@@ -179,7 +190,7 @@ export function calculateIMC(pesoKg: string | number, tallaMts: string | number)
   return { imc: imcStr, category, alertControlled };
 }
 
-export function formatTallaInput(raw: string): string {
+export function formatTallaInput(raw?: string): string {
   if (!raw) return '';
   const clean = raw.replace(/[^\d.]/g, '');
   const num = parseFloat(clean);
@@ -191,7 +202,8 @@ export function formatTallaInput(raw: string): string {
 }
 
 // Generadores de texto modular listos para copiar y pegar en SAC
-export function generateModule1Text(data: IdentificationData): string {
+export function generateModule1Text(data?: IdentificationData | null): string {
+  if (!data) return '';
   return `[DATOS GENERALES]
 Nombre(s): ${data.nombres || ''}
 Apellido Paterno: ${data.apellidoPaterno || ''}
@@ -219,16 +231,17 @@ Teléfono Celular: ${data.telefonoCelular || ''} | Correo Electrónico: ${data.c
 - Inmunizaciones: ${data.inmunizaciones || 'Completas'}`;
 }
 
-export function generateModule2Text(data: HistoryCheckupData): string {
-  const v = data.vitalSigns;
-  const pe = data.physicalExam;
+export function generateModule2Text(data?: HistoryCheckupData | null): string {
+  if (!data) return '';
+  const v = data.vitalSigns || ({} as any);
+  const pe = data.physicalExam || ({} as any);
 
   let interr = data.interrogatorioAparatos?.trim() || 'Sin sintomatología referida por aparatos y sistemas';
   if (!interr.includes('resto del interrogatorio negado')) {
     interr += ', resto del interrogatorio negado.';
   }
 
-  const prescripts = data.prescripcion.map((p, i) => 
+  const prescripts = (data.prescripcion || []).map((p, i) => 
     `  ${i + 1}. Producto: ${p.producto} ${p.marcaInstitucional ? `(${p.marcaInstitucional})` : ''}
      Cantidad: ${p.cantidad} | Vía: ${p.via} | Dosis: ${p.dosis}
      Periodicidad: ${p.periodicidad}${p.indicacionesAdicionales ? `\n     Indicación: ${p.indicacionesAdicionales}` : ''}`
@@ -265,8 +278,9 @@ export function generateModule2Text(data: HistoryCheckupData): string {
 ${prescripts || '  - Sin prescripción farmacológica en esta consulta.'}`;
 }
 
-export function generateModule3Text(data: EvolutionNoteData): string {
-  const v = data.vitalSigns;
+export function generateModule3Text(data?: EvolutionNoteData | null): string {
+  if (!data) return '';
+  const v = data.vitalSigns || ({} as any);
   const taDisplay = v?.taPediatricaBadge ? `${v.taPediatricaBadge}` : `${v?.taSistolica || '120'}/${v?.taDiastolica || '80'}`;
   const spo2Display = v?.satO2 ? ` | SpO2: ${v.satO2}%` : ' | SpO2: 98%';
 
@@ -289,7 +303,8 @@ export function generateModule3Text(data: EvolutionNoteData): string {
   ${data.planTerapeutico || 'Se mantiene plan terapéutico actual con recomendaciones higiénico-dietéticas. Se reitera vigilancia de signos de alarma. Cita abierta.'}`;
 }
 
-export function generateModule4Text(data: ProcedureData): string {
+export function generateModule4Text(data?: ProcedureData | null): string {
+  if (!data) return '';
   return `* Procedimiento Realizado:
   ${data.procedimientoRealizado || 'Aplicación de Inyección Intramuscular'}
 
