@@ -1,4 +1,5 @@
 import { ClinicAccount, SessionUser, ClinicalRecord, DoctorSettings, LicenseStatus, AdminContactInfo } from '../types';
+import { pushClinicsToCloud, pullClinicsFromCloud } from './cloudStorage';
 
 export const SUPERADMIN_USER = 'Fernando01';
 export const SUPERADMIN_PASS = 'Bazzoka1313AS.';
@@ -44,11 +45,14 @@ export function getAdminContactInfo(): AdminContactInfo {
   };
 }
 
-export function saveAdminContactInfo(info: AdminContactInfo): void {
+export function saveAdminContactInfo(info: AdminContactInfo, syncToCloud: boolean = true): void {
   try {
     localStorage.setItem(ADMIN_CONTACT_KEY, JSON.stringify(info));
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent(ADMIN_CONTACT_EVENT, { detail: info }));
+    }
+    if (syncToCloud) {
+      setTimeout(() => pushClinicsToCloud().catch(() => {}), 100);
     }
   } catch (e) {
     console.error('Error saving admin contact info', e);
@@ -230,11 +234,14 @@ export function getAllClinics(): ClinicAccount[] {
   }
 }
 
-export function saveAllClinics(clinics: ClinicAccount[]): void {
+export function saveAllClinics(clinics: ClinicAccount[], syncToCloud: boolean = true): void {
   try {
     localStorage.setItem(MASTER_CLINICS_KEY, JSON.stringify(clinics));
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent(CLINICS_UPDATED_EVENT, { detail: clinics }));
+    }
+    if (syncToCloud) {
+      setTimeout(() => pushClinicsToCloud(clinics).catch(() => {}), 100);
     }
   } catch (e) {
     console.error('Error saving clinics', e);
@@ -277,7 +284,7 @@ export function registerClinic(data: Omit<ClinicAccount, 'id' | 'createdAt' | 'l
   };
 
   const updatedClinics = [newClinic, ...clinics];
-  saveAllClinics(updatedClinics);
+  saveAllClinics(updatedClinics, true);
 
   initClinicDatabase(newClinic);
 
@@ -292,7 +299,7 @@ export function updateClinic(clinicId: string, updates: Partial<ClinicAccount>):
     }
     return c;
   });
-  saveAllClinics(next);
+  saveAllClinics(next, true);
 
   const currentSession = getCurrentSession();
   if (currentSession && currentSession.clinicId === clinicId) {
@@ -311,7 +318,7 @@ export function updateClinic(clinicId: string, updates: Partial<ClinicAccount>):
 export function deleteClinic(clinicId: string): ClinicAccount[] {
   const clinics = getAllClinics();
   const filtered = clinics.filter(c => c.id !== clinicId);
-  saveAllClinics(filtered);
+  saveAllClinics(filtered, true);
 
   try {
     localStorage.removeItem(`clinic_care_records_clinic_${clinicId}_v2`);

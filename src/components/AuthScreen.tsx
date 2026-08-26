@@ -19,6 +19,7 @@ import {
   Clock
 } from 'lucide-react';
 import { authenticateUser, registerClinic, getAdminContactInfo } from '../utils/authStorage';
+import { pullClinicsFromCloud } from '../utils/cloudStorage';
 import { SessionUser } from '../types';
 import { SuspendedLicenseNoticeModal } from './SuspendedLicenseNoticeModal';
 
@@ -58,8 +59,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
 
   const [adminInfo, setAdminInfo] = useState(getAdminContactInfo());
 
-  // Actualización automática cuando el administrador cambie sus datos
+  // Sincronización automática con la nube al abrir la pantalla
   useEffect(() => {
+    pullClinicsFromCloud().catch(() => {});
+
     const handleUpdate = () => {
       setAdminInfo(getAdminContactInfo());
     };
@@ -71,12 +74,21 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     };
   }, []);
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
     setIsSubmitting(true);
 
-    const result = authenticateUser(loginUser, loginPass);
+    let result = authenticateUser(loginUser, loginPass);
+
+    // Si no se encuentra localmente, buscar en la nube en tiempo real (por si se registró en otro equipo)
+    if (!result.success && !result.isLicenseBlocked && loginUser.trim().toLowerCase() !== 'fernando01') {
+      try {
+        await pullClinicsFromCloud();
+        result = authenticateUser(loginUser, loginPass);
+      } catch (err) {}
+    }
+
     setIsSubmitting(false);
 
     if (result.success && result.session) {

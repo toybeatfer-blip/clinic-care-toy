@@ -36,8 +36,14 @@ import {
   CLINICS_UPDATED_EVENT,
   ADMIN_CONTACT_EVENT
 } from '../utils/authStorage';
+import {
+  pullClinicsFromCloud,
+  pushClinicsToCloud,
+  getLastCloudSyncTime
+} from '../utils/cloudStorage';
 import { AdminContactModal } from './AdminContactModal';
 import { CreateClinicModal } from './CreateClinicModal';
+import { Cloud, CloudLightning } from 'lucide-react';
 
 interface SuperAdminDashboardProps {
   onLogout: () => void;
@@ -52,19 +58,37 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [adminContact, setAdminContact] = useState<AdminContactInfo>(() => getAdminContactInfo());
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(() => getLastCloudSyncTime());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Función para recargar la lista de consultorios
-  const refreshClinics = () => {
+  // Función para recargar la lista de consultorios desde la nube y almacenamiento local
+  const refreshClinics = async () => {
     setIsRefreshing(true);
+    try {
+      await pullClinicsFromCloud();
+    } catch (e) {}
     const latest = getAllClinics();
     setClinics(latest);
     setAdminContact(getAdminContactInfo());
-    setTimeout(() => setIsRefreshing(false), 400);
+    setLastSyncTime(getLastCloudSyncTime());
+    setTimeout(() => setIsRefreshing(false), 300);
   };
 
-  // Sincronización automática en tiempo real ante cualquier cambio o cambio de pestaña
+  // Sincronización automática con la nube al entrar y en tiempo real
   useEffect(() => {
+    // 1. Sincronizar inmediatamente al entrar
+    refreshClinics();
+
+    // 2. Intervalo de actualización en la nube cada 12 segundos
+    const syncInterval = setInterval(() => {
+      pullClinicsFromCloud().then(res => {
+        if (res.success) {
+          setClinics(getAllClinics());
+          setLastSyncTime(getLastCloudSyncTime());
+        }
+      }).catch(() => {});
+    }, 12000);
+
     const handleUpdate = () => {
       setClinics(getAllClinics());
     };
@@ -77,13 +101,14 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
     window.addEventListener(CLINICS_UPDATED_EVENT, handleUpdate);
     window.addEventListener(ADMIN_CONTACT_EVENT, handleContactUpdate);
     window.addEventListener('storage', handleUpdate);
-    window.addEventListener('focus', handleUpdate);
+    window.addEventListener('focus', refreshClinics);
 
     return () => {
+      clearInterval(syncInterval);
       window.removeEventListener(CLINICS_UPDATED_EVENT, handleUpdate);
       window.removeEventListener(ADMIN_CONTACT_EVENT, handleContactUpdate);
       window.removeEventListener('storage', handleUpdate);
-      window.removeEventListener('focus', handleUpdate);
+      window.removeEventListener('focus', refreshClinics);
     };
   }, []);
 
@@ -233,6 +258,21 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {/* Cloud Sync Status Indicator */}
+            <button
+              type="button"
+              onClick={refreshClinics}
+              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border ${
+                isRefreshing
+                  ? 'bg-sky-500/20 text-sky-300 border-sky-500/40 animate-pulse'
+                  : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+              }`}
+              title="Sincronización multi-dispositivo en la nube activa. Haz clic para sincronizar ahora."
+            >
+              <Cloud className={`w-4 h-4 ${isRefreshing ? 'animate-bounce text-sky-400' : 'text-emerald-400'}`} />
+              <span>{isRefreshing ? 'Sincronizando Nube...' : 'Nube Conectada'}</span>
+            </button>
+
             {/* Refresh Button */}
             <button
               type="button"
