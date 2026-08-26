@@ -8,21 +8,20 @@ import {
   ADMIN_CONTACT_EVENT
 } from './authStorage';
 
-// Identificador único de bóveda en la nube para CLINIC CARE TOY
+// Identificador de almacenamiento en la nube para CLINIC CARE TOY
 const PANTRY_ID = 'b7f3d1e9-6a2c-4915-8d5f-cliniccaretoy99';
 const BASE_URL = `https://getpantry.cloud/apiv1/pantry/${PANTRY_ID}/basket`;
 
 const CLOUD_CACHE_TIMESTAMP_KEY = 'clinic_care_cloud_last_synced_v2';
 
-export interface CloudSyncStatus {
-  isSyncing: boolean;
-  lastSyncedAt: string | null;
-  error: string | null;
-  isOnline: boolean;
-}
+let isPushing = false;
+let isPulling = false;
 
-// 1. Sincronizar Consultorios DESDE la Nube (Pull)
+// 1. Sincronizar Consultorios DESDE la Nube (Pull Automático)
 export async function pullClinicsFromCloud(): Promise<{ success: boolean; count: number; error?: string }> {
+  if (isPulling) return { success: true, count: getAllClinics().length };
+  isPulling = true;
+
   try {
     const res = await fetch(`${BASE_URL}/clinics_master`, {
       method: 'GET',
@@ -30,27 +29,28 @@ export async function pullClinicsFromCloud(): Promise<{ success: boolean; count:
     });
 
     if (res.status === 404) {
-      // El basket aún no existe en la nube, subir el actual
+      // El basket aún no existe en la nube, inicializarlo de inmediato
       await pushClinicsToCloud(getAllClinics());
+      isPulling = false;
       return { success: true, count: getAllClinics().length };
     }
 
     if (!res.ok) {
-      return { success: false, count: 0, error: `Error ${res.status} al conectar con la nube.` };
+      isPulling = false;
+      return { success: false, count: 0, error: `HTTP ${res.status}` };
     }
 
     const data = await res.json();
     const remoteList: ClinicAccount[] = Array.isArray(data?.clinics) ? data.clinics : (Array.isArray(data) ? data : []);
 
     if (remoteList.length > 0) {
-      // Fusionar inteligentemente con los consultorios locales
       const localList = getAllClinics();
       const mergedMap = new Map<string, ClinicAccount>();
 
-      // Primero cargar locales
+      // Cargar consultorios locales
       localList.forEach(c => mergedMap.set(c.id, c));
 
-      // Luego fusionar remotos (actualizando si es más reciente o nuevo)
+      // Fusionar remotos automáticamente
       remoteList.forEach(r => {
         if (!mergedMap.has(r.id)) {
           mergedMap.set(r.id, r);
@@ -65,26 +65,32 @@ export async function pullClinicsFromCloud(): Promise<{ success: boolean; count:
       });
 
       const finalList = Array.from(mergedMap.values());
-      saveAllClinics(finalList);
+      // Guardar sin re-disparar push a la nube (evita loops)
+      saveAllClinics(finalList, false);
 
-      // Sincronizar también datos de contacto de Fernando si vienen en la nube
+      // Sincronizar también datos de contacto de Fernando
       if (data?.adminContact && typeof data.adminContact === 'object') {
-        saveAdminContactInfo(data.adminContact);
+        saveAdminContactInfo(data.adminContact, false);
       }
 
       localStorage.setItem(CLOUD_CACHE_TIMESTAMP_KEY, new Date().toISOString());
+      isPulling = false;
       return { success: true, count: finalList.length };
     }
 
+    isPulling = false;
     return { success: true, count: getAllClinics().length };
   } catch (err: any) {
-    console.warn('Advertencia al sincronizar con la nube:', err);
-    return { success: false, count: 0, error: err?.message || 'Sin conexión' };
+    isPulling = false;
+    return { success: false, count: 0, error: err?.message || 'Error de red' };
   }
 }
 
-// 2. Subir Consultorios A la Nube (Push)
+// 2. Subir Consultorios A la Nube (Push Automático)
 export async function pushClinicsToCloud(clinicsToUpload?: ClinicAccount[]): Promise<{ success: boolean; error?: string }> {
+  if (isPushing) return { success: true };
+  isPushing = true;
+
   try {
     const list = clinicsToUpload || getAllClinics();
     const adminContact = getAdminContactInfo();
@@ -102,14 +108,15 @@ export async function pushClinicsToCloud(clinicsToUpload?: ClinicAccount[]): Pro
       body: JSON.stringify(payload)
     });
 
+    isPushing = false;
     if (res.ok) {
       localStorage.setItem(CLOUD_CACHE_TIMESTAMP_KEY, new Date().toISOString());
       return { success: true };
     } else {
-      return { success: false, error: `Error ${res.status} al guardar en la nube.` };
+      return { success: false, error: `HTTP ${res.status}` };
     }
   } catch (err: any) {
-    console.warn('Error al subir a la nube:', err);
+    isPushing = false;
     return { success: false, error: err?.message || 'Error de red' };
   }
 }

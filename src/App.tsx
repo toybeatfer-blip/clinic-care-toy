@@ -8,8 +8,12 @@ import {
   getClinicSettings,
   saveClinicSettings,
   getActiveClinicRecord,
-  getBlankClinicalRecord
+  getBlankClinicalRecord,
+  getAllClinics,
+  saveSession,
+  CLINICS_UPDATED_EVENT
 } from './utils/authStorage';
+import { pullClinicsFromCloud } from './utils/cloudStorage';
 import { AuthScreen } from './components/AuthScreen';
 import { SuperAdminDashboard } from './components/SuperAdminDashboard';
 import { Header } from './components/Header';
@@ -106,6 +110,26 @@ export const App: React.FC = () => {
       setLastSavedTime('Guardado a las ' + new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     }
   }, [record, session]);
+
+  // Actualización automática en vivo de la cuenta si el Super Admin la renueva o modifica
+  useEffect(() => {
+    if (session?.type === 'clinic' && session.clinicId) {
+      const handleClinicsUpdated = () => {
+        const all = getAllClinics();
+        const fresh = all.find(c => c.id === session.clinicId);
+        if (fresh) {
+          const updatedSession = { ...session, clinicAccount: fresh };
+          setSession(updatedSession);
+          saveSession(updatedSession);
+        }
+      };
+
+      window.addEventListener(CLINICS_UPDATED_EVENT, handleClinicsUpdated);
+      return () => {
+        window.removeEventListener(CLINICS_UPDATED_EVENT, handleClinicsUpdated);
+      };
+    }
+  }, [session?.clinicId]);
 
   // Dark Mode toggle
   useEffect(() => {

@@ -79,7 +79,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
     // 1. Sincronizar inmediatamente al entrar
     refreshClinics();
 
-    // 2. Intervalo de actualización en la nube cada 12 segundos
+    // 2. Intervalo de actualización en la nube ultra-rápido cada 4 segundos (100% automático)
     const syncInterval = setInterval(() => {
       pullClinicsFromCloud().then(res => {
         if (res.success) {
@@ -87,7 +87,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
           setLastSyncTime(getLastCloudSyncTime());
         }
       }).catch(() => {});
-    }, 12000);
+    }, 4000);
 
     const handleUpdate = () => {
       setClinics(getAllClinics());
