@@ -9,6 +9,15 @@ const ADMIN_CONTACT_KEY = 'clinic_care_admin_contact_v2';
 export const ADMIN_CONTACT_EVENT = 'clinic_care_admin_contact_updated_v2';
 export const CLINICS_UPDATED_EVENT = 'clinic_care_clinics_updated_v2';
 
+export function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    try {
+      return crypto.randomUUID();
+    } catch (e) {}
+  }
+  return 'clinic_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 9);
+}
+
 // 1. DATOS DE CONTACTO DEL ADMINISTRADOR
 export function getAdminContactInfo(): AdminContactInfo {
   try {
@@ -115,26 +124,85 @@ export function clearSession(): void {
 // 4. REGISTRO MAESTRO DE CONSULTORIOS (DURACIÓN DE 1 MES)
 export function getAllClinics(): ClinicAccount[] {
   try {
-    let raw = localStorage.getItem(MASTER_CLINICS_KEY);
-    
-    // Recuperar de claves de versiones anteriores si la v2 está vacía
-    if (!raw) {
-      const v1 = localStorage.getItem('clinic_care_clinics_master_v1') || localStorage.getItem('clinic_care_clinics_master');
-      if (v1) {
-        raw = v1;
-        localStorage.setItem(MASTER_CLINICS_KEY, v1);
+    const clinicsMap = new Map<string, ClinicAccount>();
+
+    // 1. Cargar del registro principal
+    const raw = localStorage.getItem(MASTER_CLINICS_KEY);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((c: any) => {
+            if (c && c.id) clinicsMap.set(c.id, c);
+          });
+        }
+      } catch (e) {}
+    }
+
+    // 2. Cargar de claves anteriores si existen
+    const legacyKeys = ['clinic_care_clinics_master_v1', 'clinic_care_clinics_master'];
+    legacyKeys.forEach(k => {
+      const leg = localStorage.getItem(k);
+      if (leg) {
+        try {
+          const parsed = JSON.parse(leg);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((c: any) => {
+              if (c && c.id && !clinicsMap.has(c.id)) {
+                clinicsMap.set(c.id, c);
+              }
+            });
+          }
+        } catch (e) {}
+      }
+    });
+
+    // 3. Escaneo inteligente de recuperación de consultorios huérfanos en localStorage
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('clinic_care_settings_clinic_')) {
+        const cId = key.replace('clinic_care_settings_clinic_', '').replace('_v2', '');
+        if (cId && !clinicsMap.has(cId)) {
+          try {
+            const settingsRaw = localStorage.getItem(key);
+            if (settingsRaw) {
+              const s = JSON.parse(settingsRaw);
+              const recovered: ClinicAccount = {
+                id: cId,
+                clinicName: s.nombreClinica || 'Consultorio Médico',
+                username: `usuario_${cId.substring(0, 6)}`,
+                passwordPlain: '1234',
+                doctorName: s.doctorName || 'Médico Responsable',
+                prefix: s.prefix || 'Dr.',
+                cedulaGeneral: s.cedulaGeneral || '',
+                cedulaEspecialidad: s.cedulaEspecialidad || '',
+                especialidad: s.especialidad || 'Medicina General',
+                universidad: s.universidad || '',
+                telefono: s.telefonoContacto || '',
+                correo: s.correoContacto || '',
+                direccion: s.direccionClinica || '',
+                sucursal: s.sucursal || '',
+                logoUrl: s.logoUrl || '',
+                primaryColor: s.primaryColor || 'sky',
+                createdAt: new Date().toISOString(),
+                lastLoginAt: new Date().toISOString(),
+                licenseStatus: 'active',
+                licenseValidUntil: 'Indefinida'
+              };
+              clinicsMap.set(cId, recovered);
+            }
+          } catch (e) {}
+        }
       }
     }
 
-    if (!raw) return [];
-    const list = JSON.parse(raw);
-    if (!Array.isArray(list)) return [];
+    const list = Array.from(clinicsMap.values());
     
     return list.map((c: any) => {
       const remaining = getDaysRemaining(c.licenseValidUntil);
       const isExpired = remaining.isExpired;
       return {
-        id: c.id || `clinic_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        id: c.id || generateUUID(),
         clinicName: c.clinicName || 'Consultorio Médico',
         username: c.username || '',
         passwordPlain: c.passwordPlain || '',
@@ -200,7 +268,7 @@ export function registerClinic(data: Omit<ClinicAccount, 'id' | 'createdAt' | 'l
 
   const newClinic: ClinicAccount = {
     ...data,
-    id: crypto.randomUUID ? crypto.randomUUID() : `clinic_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+    id: generateUUID(),
     username: data.username.trim(),
     createdAt: new Date().toISOString(),
     lastLoginAt: new Date().toISOString(),
@@ -348,7 +416,7 @@ export function authenticateUser(usernameInput: string, passwordInput: string): 
 // 6. BASES DE DATOS AISLADAS POR CONSULTORIO (TOTALMENTE EN BLANCO Y SEGURAS)
 export function getBlankClinicalRecord(): ClinicalRecord {
   return {
-    id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+    id: generateUUID(),
     ticketFolio: '',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
