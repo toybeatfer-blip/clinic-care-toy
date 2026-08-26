@@ -1,19 +1,32 @@
 import React from 'react';
-import { EvolutionNoteData } from '../types';
+import { EvolutionNoteData, ClinicalImage, AppointmentInfo, IdentificationData, DoctorSettings } from '../types';
 import { FieldWithCopy } from './FieldWithCopy';
 import { CopyButton } from './CopyButton';
 import { generateModule3Text, calculateIMC, formatTallaInput } from '../utils/nom004Validator';
 import { DiagnosticStudiesCard } from './DiagnosticStudiesCard';
+import { AppointmentSchedulerCard } from './AppointmentSchedulerCard';
 import { ClipboardList, Activity } from 'lucide-react';
 
 interface Module3EvolutionNoteProps {
   data: EvolutionNoteData;
   onChange: (updated: EvolutionNoteData) => void;
+  clinicalImages?: ClinicalImage[];
+  onImagesChange?: (updatedImages: ClinicalImage[]) => void;
+  appointmentInfo?: AppointmentInfo;
+  onAppointmentChange?: (apt: AppointmentInfo) => void;
+  patientInfo?: IdentificationData;
+  doctorSettings?: DoctorSettings;
 }
 
 export const Module3EvolutionNote: React.FC<Module3EvolutionNoteProps> = ({
   data,
-  onChange
+  onChange,
+  clinicalImages,
+  onImagesChange,
+  appointmentInfo,
+  onAppointmentChange,
+  patientInfo = {} as IdentificationData,
+  doctorSettings
 }) => {
   const updateField = <K extends keyof EvolutionNoteData>(field: K, value: EvolutionNoteData[K]) => {
     onChange({
@@ -171,8 +184,10 @@ export const Module3EvolutionNote: React.FC<Module3EvolutionNoteProps> = ({
         <DiagnosticStudiesCard
           data={data.estudiosDiagnostico}
           onChange={(updatedStudies) => updateField('estudiosDiagnostico', updatedStudies)}
+          clinicalImages={clinicalImages}
+          onImagesChange={onImagesChange}
           title="Estudios de Laboratorio y Gabinete (Seguimiento / Control)"
-          subtitle="Resultados de control aportados por el paciente en esta revaloración (RX, USG, TAC, Labs)"
+          subtitle="Resultados de control aportados por el paciente en esta revaloración (RX, USG, TAC, Labs y Fotos)"
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -204,6 +219,16 @@ export const Module3EvolutionNote: React.FC<Module3EvolutionNoteProps> = ({
           />
         </div>
       </div>
+
+      {/* Próxima Cita y Recordatorio WhatsApp */}
+      {onAppointmentChange && (
+        <AppointmentSchedulerCard
+          appointment={appointmentInfo}
+          onChange={onAppointmentChange}
+          patientInfo={patientInfo}
+          doctorSettings={doctorSettings}
+        />
+      )}
     </div>
   );
 };

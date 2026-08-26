@@ -575,6 +575,12 @@ export function getBlankClinicalRecord(): ClinicalRecord {
       presentacionDosis: '',
       zonaAplicacion: '',
       leyendaTestigos: 'Se cuenta con firma de consentimiento informado por paciente y testigo'
+    },
+    clinicalImages: [],
+    appointmentInfo: {
+      nextDate: '',
+      nextTime: '',
+      notes: ''
     }
   };
 }
@@ -624,6 +630,11 @@ export function deepMergeBlank(rawRecord: any): ClinicalRecord {
     procedure: {
       ...blank.procedure,
       ...(rawRecord.procedure || {})
+    },
+    clinicalImages: Array.isArray(rawRecord.clinicalImages) ? rawRecord.clinicalImages : [],
+    appointmentInfo: {
+      ...blank.appointmentInfo,
+      ...(rawRecord.appointmentInfo || {})
     }
   };
 }

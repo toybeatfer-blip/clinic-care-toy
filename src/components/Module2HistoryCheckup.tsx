@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { HistoryCheckupData, PrescriptionItem, InstitutionalMed } from '../types';
+import { HistoryCheckupData, PrescriptionItem, InstitutionalMed, ClinicalImage, AppointmentInfo, IdentificationData, DoctorSettings, PrescriptionKit } from '../types';
 import { FieldWithCopy } from './FieldWithCopy';
 import { CopyButton } from './CopyButton';
 import { generateModule2Text, calculateIMC, formatTallaInput } from '../utils/nom004Validator';
 import { CIE10_CATALOG } from '../data/cie10Catalog';
 import { MEDICATION_CATALOG } from '../data/medicationCatalog';
 import { DiagnosticStudiesCard } from './DiagnosticStudiesCard';
+import { PrescriptionKitsModal } from './PrescriptionKitsModal';
+import { AppointmentSchedulerCard } from './AppointmentSchedulerCard';
 import {
   FileHeart,
   Activity,
@@ -14,18 +16,34 @@ import {
   Pill,
   Plus,
   Trash2,
-  ShieldCheck
+  ShieldCheck,
+  Package
 } from 'lucide-react';
 
 interface Module2HistoryCheckupProps {
   data: HistoryCheckupData;
   onChange: (updated: HistoryCheckupData) => void;
+  clinicalImages?: ClinicalImage[];
+  onImagesChange?: (updatedImages: ClinicalImage[]) => void;
+  appointmentInfo?: AppointmentInfo;
+  onAppointmentChange?: (apt: AppointmentInfo) => void;
+  patientInfo?: IdentificationData;
+  doctorSettings?: DoctorSettings;
+  clinicId?: string;
 }
 
 export const Module2HistoryCheckup: React.FC<Module2HistoryCheckupProps> = ({
   data,
-  onChange
+  onChange,
+  clinicalImages,
+  onImagesChange,
+  appointmentInfo,
+  onAppointmentChange,
+  patientInfo = {} as IdentificationData,
+  doctorSettings,
+  clinicId
 }) => {
+  const [showKitsModal, setShowKitsModal] = useState<boolean>(false);
   const [cieSearch, setCieSearch] = useState('');
   const [showCieDropdown, setShowCieDropdown] = useState(false);
   const [medSearch, setMedSearch] = useState('');
@@ -100,6 +118,17 @@ export const Module2HistoryCheckup: React.FC<Module2HistoryCheckupProps> = ({
     m.category.toLowerCase().includes(medSearch.toLowerCase())
   ).slice(0, 8);
 
+  const handleApplyKit = (kit: PrescriptionKit, mode: 'replace' | 'append') => {
+    if (mode === 'replace') {
+      updateField('prescripcion', kit.items);
+    } else {
+      updateField('prescripcion', [...data.prescripcion, ...kit.items]);
+    }
+    if (kit.indications && !data.indicacionTerapeutica?.trim()) {
+      updateField('indicacionTerapeutica', kit.indications);
+    }
+  };
+
   const fullModuleText = generateModule2Text(data);
   const imcInfo = calculateIMC(data?.vitalSigns?.peso, data?.vitalSigns?.talla);
 
@@ -113,21 +142,31 @@ export const Module2HistoryCheckup: React.FC<Module2HistoryCheckupProps> = ({
           </div>
           <div>
             <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">
-              Módulo 2: Historia Clínica General / Checkup
+              Módulo 2: Historia Clínica y Consulta Inicial (NOM-004)
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Padecimiento, signos vitales con SpO2, somatometría, exploración, diagnóstico CIE-10 y prescripción
+              Padecimiento actual, signos vitales con IMC, exploración física cefalocaudal, estudios y prescripción
             </p>
           </div>
         </div>
 
         <CopyButton
           text={fullModuleText}
-          label="Copiar Historia Clínica Completa"
+          label="Copiar Nota Completa (Módulo 2)"
           variant="primary"
           size="md"
         />
       </div>
+
+      {/* Prescription Kits Modal */}
+      <PrescriptionKitsModal
+        isOpen={showKitsModal}
+        onClose={() => setShowKitsModal(false)}
+        onApplyKit={handleApplyKit}
+        currentPrescription={data.prescripcion}
+        currentIndications={data.indicacionTerapeutica}
+        clinicId={clinicId}
+      />
 
       {/* Padecimiento Actual & Interrogatorio */}
       <div className="p-5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
@@ -370,8 +409,10 @@ export const Module2HistoryCheckup: React.FC<Module2HistoryCheckupProps> = ({
       <DiagnosticStudiesCard
         data={data.estudiosDiagnostico}
         onChange={(updatedStudies) => updateField('estudiosDiagnostico', updatedStudies)}
+        clinicalImages={clinicalImages}
+        onImagesChange={onImagesChange}
         title="Estudios de Laboratorio y Gabinete Aportados por el Paciente"
-        subtitle="Registro detallado de Laboratorios Clínicos, Rayos X (RX), Ultrasonido (USG), Tomografía (TAC) y RMN"
+        subtitle="Registro detallado de Laboratorios Clínicos, Rayos X (RX), Ultrasonido (USG), Tomografía (TAC), RMN y Fotos"
       />
 
       {/* Diagnóstico (CIE-10) y Pronóstico */}
@@ -487,6 +528,16 @@ export const Module2HistoryCheckup: React.FC<Module2HistoryCheckupProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowKitsModal(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-teal-600 hover:bg-teal-700 text-white transition-all shadow-sm"
+              title="Abrir paquetes de tratamiento frecuentes y esquemas rápidos"
+            >
+              <Package className="w-3.5 h-3.5" />
+              <span>Paquetes Frecuentes</span>
+            </button>
+
             <button
               type="button"
               onClick={() => addPrescriptionItem()}
@@ -687,6 +738,16 @@ export const Module2HistoryCheckup: React.FC<Module2HistoryCheckupProps> = ({
           />
         </div>
       </div>
+
+      {/* Próxima Cita y Recordatorio WhatsApp */}
+      {onAppointmentChange && (
+        <AppointmentSchedulerCard
+          appointment={appointmentInfo}
+          onChange={onAppointmentChange}
+          patientInfo={patientInfo}
+          doctorSettings={doctorSettings}
+        />
+      )}
     </div>
   );
 };

@@ -27,6 +27,8 @@ import { RawDataParserModal } from './components/RawDataParserModal';
 import { SavedRecordsDrawer } from './components/SavedRecordsDrawer';
 import { PrintableNoteModal } from './components/PrintableNoteModal';
 import { SettingsModal } from './components/SettingsModal';
+import { SpecialistToolsModal } from './components/SpecialistToolsModal';
+import { PatientTimelineModal } from './components/PatientTimelineModal';
 import {
   UserCheck,
   FileHeart,
@@ -71,6 +73,8 @@ export const App: React.FC = () => {
   // Modals & Drawers
   const [isOpGuideOpen, setIsOpGuideOpen] = useState(false);
   const [isRawParserOpen, setIsRawParserOpen] = useState(false);
+  const [isSpecialistToolsOpen, setIsSpecialistToolsOpen] = useState(false);
+  const [isPatientTimelineOpen, setIsPatientTimelineOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -184,6 +188,8 @@ export const App: React.FC = () => {
         onTicketFolioChange={(folio) => setRecord({ ...record, ticketFolio: folio })}
         onOpenOperationalGuide={() => setIsOpGuideOpen(true)}
         onOpenRawDataParser={() => setIsRawParserOpen(true)}
+        onOpenSpecialistTools={() => setIsSpecialistToolsOpen(true)}
+        onOpenPatientTimeline={() => setIsPatientTimelineOpen(true)}
         onOpenSavedDrawer={() => setIsDrawerOpen(true)}
         onOpenPrintPreview={() => setIsPrintModalOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
@@ -292,6 +298,13 @@ export const App: React.FC = () => {
             <Module2HistoryCheckup
               data={record.historyCheckup}
               onChange={(updated) => setRecord({ ...record, historyCheckup: updated })}
+              clinicalImages={record.clinicalImages}
+              onImagesChange={(imgs) => setRecord({ ...record, clinicalImages: imgs })}
+              appointmentInfo={record.appointmentInfo}
+              onAppointmentChange={(apt) => setRecord({ ...record, appointmentInfo: apt })}
+              patientInfo={record.identification}
+              doctorSettings={doctorSettings}
+              clinicId={clinicId}
             />
           )}
 
@@ -299,6 +312,12 @@ export const App: React.FC = () => {
             <Module3EvolutionNote
               data={record.evolutionNote}
               onChange={(updated) => setRecord({ ...record, evolutionNote: updated })}
+              clinicalImages={record.clinicalImages}
+              onImagesChange={(imgs) => setRecord({ ...record, clinicalImages: imgs })}
+              appointmentInfo={record.appointmentInfo}
+              onAppointmentChange={(apt) => setRecord({ ...record, appointmentInfo: apt })}
+              patientInfo={record.identification}
+              doctorSettings={doctorSettings}
             />
           )}
 
@@ -322,6 +341,24 @@ export const App: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3 text-[11px]">
+            <button
+              type="button"
+              onClick={() => setIsSpecialistToolsOpen(true)}
+              className="hover:text-sky-600 transition-colors flex items-center gap-1"
+            >
+              <Calculator className="w-3.5 h-3.5" />
+              <span>Calculadoras</span>
+            </button>
+            <span>•</span>
+            <button
+              type="button"
+              onClick={() => setIsPatientTimelineOpen(true)}
+              className="hover:text-sky-600 transition-colors flex items-center gap-1"
+            >
+              <History className="w-3.5 h-3.5" />
+              <span>Línea de Tiempo</span>
+            </button>
+            <span>•</span>
             <button
               type="button"
               onClick={() => setIsSettingsOpen(true)}
@@ -379,6 +416,42 @@ export const App: React.FC = () => {
         onClose={() => setIsRawParserOpen(false)}
         currentRecord={record}
         onApplyParsedData={(updated) => setRecord(updated)}
+      />
+
+      <SpecialistToolsModal
+        isOpen={isSpecialistToolsOpen}
+        onClose={() => setIsSpecialistToolsOpen(false)}
+        patientAge={record.identification.edad}
+        patientSex={record.identification.sexo}
+        patientWeight={record.historyCheckup.vitalSigns?.peso}
+        onInsertTextToNote={(text) => {
+          if (activeTab === 'modulo3') {
+            setRecord({
+              ...record,
+              evolutionNote: {
+                ...record.evolutionNote,
+                evolucionCuadroClinico: (record.evolutionNote.evolucionCuadroClinico || '') + text
+              }
+            });
+          } else {
+            setRecord({
+              ...record,
+              historyCheckup: {
+                ...record.historyCheckup,
+                padecimientoActual: (record.historyCheckup.padecimientoActual || '') + text
+              }
+            });
+          }
+        }}
+      />
+
+      <PatientTimelineModal
+        isOpen={isPatientTimelineOpen}
+        onClose={() => setIsPatientTimelineOpen(false)}
+        allRecords={savedRecords}
+        currentPatientName={`${record.identification.nombres || ''} ${record.identification.apellidoPaterno || ''}`}
+        currentPatientCurp={record.identification.curp}
+        onSelectRecord={(rec) => setRecord(rec)}
       />
 
       <SavedRecordsDrawer

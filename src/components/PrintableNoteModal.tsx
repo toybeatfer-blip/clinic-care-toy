@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Printer, Stethoscope, Pill, Check, Building2, User, Phone, Mail, FlaskConical } from 'lucide-react';
+import { X, Printer, Stethoscope, Pill, Check, Building2, User, Phone, Mail, FlaskConical, Calendar, Camera } from 'lucide-react';
 import { ClinicalRecord, DoctorSettings } from '../types';
 
 interface PrintableNoteModalProps {
@@ -251,6 +251,37 @@ export const PrintableNoteModal: React.FC<PrintableNoteModalProps> = ({
                 {hc.indicacionTerapeutica}
               </p>
             </div>
+
+            {/* Próxima Cita Agendada */}
+            {record.appointmentInfo?.nextDate && (
+              <div className="bg-emerald-50/70 border border-emerald-300 p-2.5 rounded-lg text-xs flex items-center justify-between text-emerald-950">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-emerald-700 shrink-0" />
+                  <span>
+                    <strong>Próxima Cita de Revaloración:</strong> {record.appointmentInfo.nextDate} {record.appointmentInfo.nextTime ? `a las ${record.appointmentInfo.nextTime} hrs` : ''}
+                    {record.appointmentInfo.notes ? ` (${record.appointmentInfo.notes})` : ''}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Fotografías y Estudios Adjuntos */}
+            {record.clinicalImages && record.clinicalImages.length > 0 && (
+              <div className="border-t border-slate-200 pt-3">
+                <strong className="text-slate-800 uppercase block font-bold text-[11px] mb-2 flex items-center gap-1.5">
+                  <Camera className="w-3.5 h-3.5 text-sky-700" />
+                  <span>Fotografías Clínicas y Archivos Adjuntos ({record.clinicalImages.length}):</span>
+                </strong>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {record.clinicalImages.map((img) => (
+                    <div key={img.id} className="border border-slate-300 rounded-lg overflow-hidden bg-white p-1 text-[10px]">
+                      <img src={img.url} alt={img.label} className="w-full h-20 object-cover rounded" />
+                      <p className="font-semibold text-slate-800 truncate mt-1">{img.label}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Signature lines with Doctor's professional details */}

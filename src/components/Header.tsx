@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Stethoscope, Clock, BookOpen, Sparkles, FolderOpen, UserPlus, Printer, Settings, Ticket, LogOut, ShieldCheck, Building2, Calendar } from 'lucide-react';
+import { Stethoscope, Clock, BookOpen, Sparkles, FolderOpen, UserPlus, Printer, Settings, Ticket, LogOut, ShieldCheck, Building2, Calendar, Calculator, History } from 'lucide-react';
 import { CopyButton } from './CopyButton';
 import { DoctorSettings, SessionUser } from '../types';
 import { getDaysRemaining } from '../utils/authStorage';
@@ -9,6 +9,8 @@ interface HeaderProps {
   onTicketFolioChange: (folio: string) => void;
   onOpenOperationalGuide: () => void;
   onOpenRawDataParser: () => void;
+  onOpenSpecialistTools: () => void;
+  onOpenPatientTimeline: () => void;
   onOpenSavedDrawer: () => void;
   onOpenPrintPreview: () => void;
   onOpenSettings: () => void;
@@ -23,6 +25,8 @@ export const Header: React.FC<HeaderProps> = ({
   onTicketFolioChange,
   onOpenOperationalGuide,
   onOpenRawDataParser,
+  onOpenSpecialistTools,
+  onOpenPatientTimeline,
   onOpenSavedDrawer,
   onOpenPrintPreview,
   onOpenSettings,
@@ -114,6 +118,26 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Quick Actions */}
             <button
               type="button"
+              onClick={onOpenSpecialistTools}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-xs font-semibold hover:bg-blue-100 transition-colors shadow-sm"
+              title="Calculadoras especializadas: Gineco (FUM/SDG), Pediatría (Dosis ponderal) y Cockcroft-Gault"
+            >
+              <Calculator className="w-3.5 h-3.5 text-blue-600" />
+              <span>Calculadoras</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onOpenPatientTimeline}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 text-xs font-semibold hover:bg-purple-100 transition-colors shadow-sm"
+              title="Línea de tiempo cronológica y evolución de pacientes"
+            >
+              <History className="w-3.5 h-3.5 text-purple-600" />
+              <span className="hidden sm:inline">Línea de Tiempo</span>
+            </button>
+
+            <button
+              type="button"
               onClick={onOpenRawDataParser}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-xs font-semibold hover:bg-indigo-100 transition-colors shadow-sm"
               title="Pegar notas en bruto para estructurar automáticamente"
@@ -129,7 +153,7 @@ export const Header: React.FC<HeaderProps> = ({
               title="Manual operativo de SAC, tickets, contraseñas y biométrico"
             >
               <BookOpen className="w-3.5 h-3.5 text-sky-600" />
-              <span className="hidden sm:inline">Manual SAC</span>
+              <span className="hidden md:inline">Manual SAC</span>
             </button>
 
             <button

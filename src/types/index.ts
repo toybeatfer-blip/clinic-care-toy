@@ -110,6 +110,29 @@ export interface ProcedureData {
   leyendaTestigos: string;
 }
 
+export interface ClinicalImage {
+  id: string;
+  url: string; // Base64 data URI
+  label: string;
+  date: string;
+  category?: 'rx' | 'usg' | 'tac' | 'laboratorio' | 'herida' | 'otro';
+}
+
+export interface AppointmentInfo {
+  nextDate?: string; // YYYY-MM-DD
+  nextTime?: string; // HH:MM
+  notes?: string;
+}
+
+export interface PrescriptionKit {
+  id: string;
+  name: string;
+  category: string;
+  description?: string;
+  items: PrescriptionItem[];
+  indications?: string;
+}
+
 export interface ClinicalRecord {
   id: string;
   ticketFolio?: string;
@@ -120,6 +143,8 @@ export interface ClinicalRecord {
   evolutionNote: EvolutionNoteData;
   procedure: ProcedureData;
   activeModule: 'modulo1' | 'modulo2' | 'modulo3' | 'modulo4';
+  clinicalImages?: ClinicalImage[];
+  appointmentInfo?: AppointmentInfo;
 }
 
 export interface DoctorSettings {

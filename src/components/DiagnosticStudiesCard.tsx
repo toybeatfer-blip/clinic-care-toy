@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { DiagnosticStudiesData } from '../types';
+import { DiagnosticStudiesData, ClinicalImage } from '../types';
 import { FieldWithCopy } from './FieldWithCopy';
 import { CopyButton } from './CopyButton';
+import { ClinicalPhotoUpload } from './ClinicalPhotoUpload';
 import {
   FlaskConical,
   Activity,
@@ -9,12 +10,15 @@ import {
   Layers,
   Sparkles,
   ClipboardList,
-  CheckCircle2
+  CheckCircle2,
+  Camera
 } from 'lucide-react';
 
 interface DiagnosticStudiesCardProps {
   data?: DiagnosticStudiesData;
   onChange: (updated: DiagnosticStudiesData) => void;
+  clinicalImages?: ClinicalImage[];
+  onImagesChange?: (updatedImages: ClinicalImage[]) => void;
   title?: string;
   subtitle?: string;
 }
@@ -22,6 +26,8 @@ interface DiagnosticStudiesCardProps {
 export const DiagnosticStudiesCard: React.FC<DiagnosticStudiesCardProps> = ({
   data = {},
   onChange,
+  clinicalImages,
+  onImagesChange,
   title = 'Estudios Previos / Aportados por el Paciente (Laboratorio y Gabinete)',
   subtitle = 'Registro de Laboratorios, Rayos X (RX), Ultrasonido (USG), Tomografía (TAC) y otros'
 }) => {
@@ -286,6 +292,15 @@ export const DiagnosticStudiesCard: React.FC<DiagnosticStudiesCardProps> = ({
             helpText="* Conclusión diagnóstica integral derivada de los estudios aportados."
           />
         </div>
+
+        {/* 7. Foto-Documentación de Estudios (si se provee handler) */}
+        {onImagesChange && (
+          <ClinicalPhotoUpload
+            images={clinicalImages || []}
+            onChange={onImagesChange}
+            title="Fotografías y Archivos de Estudios (RX, USG, TAC, Labs o Lesiones)"
+          />
+        )}
 
       </div>
     </div>
