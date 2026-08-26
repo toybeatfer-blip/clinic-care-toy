@@ -7,6 +7,8 @@ export const SUPERADMIN_PASS = 'Bazzoka1313AS.';
 const MASTER_CLINICS_KEY = 'clinic_care_clinics_master_v2';
 const SESSION_KEY = 'clinic_care_session_v2';
 const ADMIN_CONTACT_KEY = 'clinic_care_admin_contact_v2';
+const DELETED_CLINICS_KEY = 'clinic_care_deleted_ids_v2';
+
 export const ADMIN_CONTACT_EVENT = 'clinic_care_admin_contact_updated_v2';
 export const CLINICS_UPDATED_EVENT = 'clinic_care_clinics_updated_v2';
 
@@ -17,6 +19,28 @@ export function generateUUID(): string {
     } catch (e) {}
   }
   return 'clinic_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 9);
+}
+
+// 0. GESTIÓN DE CONSULTORIOS ELIMINADOS (TOMBSTONES)
+export function getDeletedClinicIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(DELETED_CLINICS_KEY);
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) {
+        return new Set(arr);
+      }
+    }
+  } catch (e) {}
+  return new Set();
+}
+
+export function addDeletedClinicId(id: string): void {
+  try {
+    const set = getDeletedClinicIds();
+    set.add(id);
+    localStorage.setItem(DELETED_CLINICS_KEY, JSON.stringify(Array.from(set)));
+  } catch (e) {}
 }
 
 // 1. DATOS DE CONTACTO DEL ADMINISTRADOR
@@ -30,7 +54,8 @@ export function getAdminContactInfo(): AdminContactInfo {
           adminName: parsed.adminName || 'Fernando (Super Administrador)',
           phoneWhatsApp: parsed.phoneWhatsApp || '55 1234 5678',
           email: parsed.email || 'toybeatfer@gmail.com',
-          helpMessage: parsed.helpMessage || 'Para renovar tu licencia mensual o resolver dudas sobre tu cuenta de consultorio, comunícate directamente con el administrador del sistema.'
+          helpMessage: parsed.helpMessage || 'Para renovar tu licencia mensual o resolver dudas sobre tu cuenta de consultorio, comunícate directamente con el administrador del sistema.',
+          updatedAt: parsed.updatedAt || '2026-01-01T00:00:00.000Z'
         };
       }
     }
@@ -41,18 +66,23 @@ export function getAdminContactInfo(): AdminContactInfo {
     adminName: 'Fernando (Super Administrador)',
     phoneWhatsApp: '55 1234 5678',
     email: 'toybeatfer@gmail.com',
-    helpMessage: 'Para renovar tu licencia mensual o resolver dudas sobre tu cuenta de consultorio, comunícate directamente con el administrador del sistema.'
+    helpMessage: 'Para renovar tu licencia mensual o resolver dudas sobre tu cuenta de consultorio, comunícate directamente con el administrador del sistema.',
+    updatedAt: '2026-01-01T00:00:00.000Z'
   };
 }
 
 export function saveAdminContactInfo(info: AdminContactInfo, syncToCloud: boolean = true): void {
   try {
-    localStorage.setItem(ADMIN_CONTACT_KEY, JSON.stringify(info));
+    const freshInfo: AdminContactInfo = {
+      ...info,
+      updatedAt: info.updatedAt || new Date().toISOString()
+    };
+    localStorage.setItem(ADMIN_CONTACT_KEY, JSON.stringify(freshInfo));
     if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent(ADMIN_CONTACT_EVENT, { detail: info }));
+      window.dispatchEvent(new CustomEvent(ADMIN_CONTACT_EVENT, { detail: freshInfo }));
     }
     if (syncToCloud) {
-      setTimeout(() => pushClinicsToCloud().catch(() => {}), 100);
+      setTimeout(() => pushClinicsToCloud().catch(() => {}), 50);
     }
   } catch (e) {
     console.error('Error saving admin contact info', e);
@@ -125,9 +155,10 @@ export function clearSession(): void {
   }
 }
 
-// 4. REGISTRO MAESTRO DE CONSULTORIOS (CON ESCÁNER HISTÓRICO PROFUNDO)
+// 4. REGISTRO MAESTRO DE CONSULTORIOS
 export function getAllClinics(): ClinicAccount[] {
   try {
+    const deletedIds = getDeletedClinicIds();
     const clinicsMap = new Map<string, ClinicAccount>();
 
     // 1. Cargar del registro principal actual v2
@@ -137,7 +168,9 @@ export function getAllClinics(): ClinicAccount[] {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
           parsed.forEach((c: any) => {
-            if (c && c.id) clinicsMap.set(c.id, c);
+            if (c && c.id && !deletedIds.has(c.id)) {
+              clinicsMap.set(c.id, c);
+            }
           });
         }
       } catch (e) {}
@@ -152,7 +185,7 @@ export function getAllClinics(): ClinicAccount[] {
           const parsed = JSON.parse(leg);
           if (Array.isArray(parsed)) {
             parsed.forEach((c: any) => {
-              if (c && c.id && !clinicsMap.has(c.id)) {
+              if (c && c.id && !deletedIds.has(c.id) && !clinicsMap.has(c.id)) {
                 clinicsMap.set(c.id, c);
               }
             });
@@ -168,7 +201,7 @@ export function getAllClinics(): ClinicAccount[] {
 
       if (key.startsWith('clinic_care_settings_clinic_') || key.startsWith('clinic_care_records_clinic_')) {
         const cId = key.replace('clinic_care_settings_clinic_', '').replace('clinic_care_records_clinic_', '').replace('_v2', '');
-        if (cId && !clinicsMap.has(cId)) {
+        if (cId && !deletedIds.has(cId) && !clinicsMap.has(cId)) {
           try {
             const settingsKey = `clinic_care_settings_clinic_${cId}_v2`;
             const settingsRaw = localStorage.getItem(settingsKey) || localStorage.getItem(`clinic_care_settings_clinic_${cId}`);
@@ -195,6 +228,7 @@ export function getAllClinics(): ClinicAccount[] {
               logoUrl: s.logoUrl || '',
               primaryColor: s.primaryColor || 'sky',
               createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
               lastLoginAt: new Date().toISOString(),
               licenseStatus: 'active',
               licenseValidUntil: 'Indefinida'
@@ -203,38 +237,6 @@ export function getAllClinics(): ClinicAccount[] {
           } catch (e) {}
         }
       }
-    }
-
-    // 4. Escaneo de configuración original única previa a multi-tenant
-    const singleSettingsRaw = localStorage.getItem('clinic_care_toy_settings_v1') || localStorage.getItem('clinic_care_settings');
-    if (singleSettingsRaw && !clinicsMap.has('clinic_principal')) {
-      try {
-        const s = JSON.parse(singleSettingsRaw);
-        if (s.doctorName || s.nombreClinica) {
-          clinicsMap.set('clinic_principal', {
-            id: 'clinic_principal',
-            clinicName: s.nombreClinica || 'Consultorio Principal',
-            username: 'consultorio1',
-            passwordPlain: '1234',
-            doctorName: s.doctorName || 'Médico Titular',
-            prefix: s.prefix || 'Dr.',
-            cedulaGeneral: s.cedulaGeneral || '',
-            cedulaEspecialidad: s.cedulaEspecialidad || '',
-            especialidad: s.especialidad || 'Medicina General',
-            universidad: s.universidad || '',
-            telefono: s.telefonoContacto || '',
-            correo: s.correoContacto || '',
-            direccion: s.direccionClinica || '',
-            sucursal: s.sucursal || 'Matriz',
-            logoUrl: s.logoUrl || '',
-            primaryColor: s.primaryColor || 'sky',
-            createdAt: new Date().toISOString(),
-            lastLoginAt: new Date().toISOString(),
-            licenseStatus: 'active',
-            licenseValidUntil: 'Indefinida'
-          });
-        }
-      } catch (e) {}
     }
 
     const list = Array.from(clinicsMap.values());
@@ -260,6 +262,7 @@ export function getAllClinics(): ClinicAccount[] {
         logoUrl: c.logoUrl || '',
         primaryColor: c.primaryColor || 'sky',
         createdAt: c.createdAt || new Date().toISOString(),
+        updatedAt: c.updatedAt || c.createdAt || new Date().toISOString(),
         lastLoginAt: c.lastLoginAt || new Date().toISOString(),
         licenseStatus: (isExpired && c.licenseStatus === 'active') ? 'expired' : (c.licenseStatus || 'active'),
         licenseValidUntil: c.licenseValidUntil || 'Indefinida'
@@ -273,12 +276,14 @@ export function getAllClinics(): ClinicAccount[] {
 
 export function saveAllClinics(clinics: ClinicAccount[], syncToCloud: boolean = true): void {
   try {
-    localStorage.setItem(MASTER_CLINICS_KEY, JSON.stringify(clinics));
+    const deletedIds = getDeletedClinicIds();
+    const cleanList = clinics.filter(c => !deletedIds.has(c.id));
+    localStorage.setItem(MASTER_CLINICS_KEY, JSON.stringify(cleanList));
     if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent(CLINICS_UPDATED_EVENT, { detail: clinics }));
+      window.dispatchEvent(new CustomEvent(CLINICS_UPDATED_EVENT, { detail: cleanList }));
     }
     if (syncToCloud) {
-      setTimeout(() => pushClinicsToCloud(clinics).catch(() => {}), 100);
+      setTimeout(() => pushClinicsToCloud(cleanList).catch(() => {}), 50);
     }
   } catch (e) {
     console.error('Error saving clinics', e);
@@ -302,7 +307,6 @@ export function registerClinic(data: Omit<ClinicAccount, 'id' | 'createdAt' | 'l
     return { success: false, error: `El usuario "${data.username}" ya está registrado en otro consultorio.` };
   }
 
-  // Duración inicial de 1 mes (30 días) o la especificada
   let validUntilStr = data.licenseValidUntil;
   if (!validUntilStr || validUntilStr === '1_month') {
     const expDate = new Date();
@@ -310,19 +314,20 @@ export function registerClinic(data: Omit<ClinicAccount, 'id' | 'createdAt' | 'l
     validUntilStr = expDate.toISOString().slice(0, 10);
   }
 
+  const nowStr = new Date().toISOString();
   const newClinic: ClinicAccount = {
     ...data,
     id: generateUUID(),
     username: data.username.trim(),
-    createdAt: new Date().toISOString(),
-    lastLoginAt: new Date().toISOString(),
+    createdAt: nowStr,
+    updatedAt: nowStr,
+    lastLoginAt: nowStr,
     licenseStatus: data.licenseStatus || 'active',
     licenseValidUntil: validUntilStr
   };
 
   const updatedClinics = [newClinic, ...clinics];
   saveAllClinics(updatedClinics, true);
-
   initClinicDatabase(newClinic);
 
   return { success: true, clinic: newClinic };
@@ -330,9 +335,10 @@ export function registerClinic(data: Omit<ClinicAccount, 'id' | 'createdAt' | 'l
 
 export function updateClinic(clinicId: string, updates: Partial<ClinicAccount>): ClinicAccount[] {
   const clinics = getAllClinics();
+  const nowStr = new Date().toISOString();
   const next = clinics.map(c => {
     if (c.id === clinicId) {
-      return { ...c, ...updates };
+      return { ...c, ...updates, updatedAt: nowStr };
     }
     return c;
   });
@@ -353,6 +359,7 @@ export function updateClinic(clinicId: string, updates: Partial<ClinicAccount>):
 }
 
 export function deleteClinic(clinicId: string): ClinicAccount[] {
+  addDeletedClinicId(clinicId);
   const clinics = getAllClinics();
   const filtered = clinics.filter(c => c.id !== clinicId);
   saveAllClinics(filtered, true);
@@ -457,7 +464,7 @@ export function authenticateUser(usernameInput: string, passwordInput: string): 
   return { success: true, session };
 }
 
-// 6. BASES DE DATOS AISLADAS POR CONSULTORIO (TOTALMENTE EN BLANCO Y SEGURAS)
+// 6. BASES DE DATOS AISLADAS POR CONSULTORIO
 export function getBlankClinicalRecord(): ClinicalRecord {
   return {
     id: generateUUID(),

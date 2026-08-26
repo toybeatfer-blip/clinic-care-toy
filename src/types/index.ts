@@ -152,6 +152,7 @@ export interface ClinicAccount {
   licenseStatus: LicenseStatus;
   licenseValidUntil: string; // Fecha YYYY-MM-DD
   notes?: string;
+  updatedAt?: string;
 }
 
 export interface AdminContactInfo {
@@ -159,6 +160,7 @@ export interface AdminContactInfo {
   phoneWhatsApp: string;
   email: string;
   helpMessage: string;
+  updatedAt?: string;
 }
 
 export interface SessionUser {

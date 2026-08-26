@@ -3,7 +3,8 @@ import {
   getAllClinics,
   saveAllClinics,
   getAdminContactInfo,
-  saveAdminContactInfo
+  saveAdminContactInfo,
+  getDeletedClinicIds
 } from './authStorage';
 
 // Configuración de la Bóveda Central en la Nube (GitHub Cloud DB)
@@ -25,7 +26,7 @@ const CLOUD_CACHE_TIMESTAMP_KEY = 'clinic_care_cloud_last_synced_v2';
 let isPushing = false;
 let isPulling = false;
 
-// 1. Descargar Consultorios DESDE la Nube (Pull Automático Multi-Dispositivo)
+// 1. Descargar Consultorios DESDE la Nube (Pull con Protección contra Sobreescritura)
 export async function pullClinicsFromCloud(): Promise<{ success: boolean; count: number; error?: string }> {
   if (isPulling) return { success: true, count: getAllClinics().length };
   isPulling = true;
@@ -43,23 +44,32 @@ export async function pullClinicsFromCloud(): Promise<{ success: boolean; count:
 
     const data = await res.json();
     const remoteList: ClinicAccount[] = Array.isArray(data?.clinics) ? data.clinics : [];
+    const deletedIds = getDeletedClinicIds();
 
     const localList = getAllClinics();
     const mergedMap = new Map<string, ClinicAccount>();
 
-    // Cargar consultorios locales (incluyendo recuperados por escaneo histórico)
-    localList.forEach(c => mergedMap.set(c.id, c));
+    // 1. Cargar consultorios locales
+    localList.forEach(c => {
+      if (!deletedIds.has(c.id)) {
+        mergedMap.set(c.id, c);
+      }
+    });
 
-    // Fusionar remotos automáticamente
+    // 2. Fusionar remotos respetando el registro más reciente según updatedAt
     remoteList.forEach(r => {
-      if (!mergedMap.has(r.id)) {
-        mergedMap.set(r.id, r);
-      } else {
-        const local = mergedMap.get(r.id)!;
-        const remoteTime = new Date(r.lastLoginAt || r.createdAt || 0).getTime();
-        const localTime = new Date(local.lastLoginAt || local.createdAt || 0).getTime();
-        if (remoteTime >= localTime) {
-          mergedMap.set(r.id, { ...local, ...r });
+      if (!deletedIds.has(r.id)) {
+        if (!mergedMap.has(r.id)) {
+          mergedMap.set(r.id, r);
+        } else {
+          const local = mergedMap.get(r.id)!;
+          const remoteTime = new Date(r.updatedAt || r.lastLoginAt || r.createdAt || 0).getTime();
+          const localTime = new Date(local.updatedAt || local.lastLoginAt || local.createdAt || 0).getTime();
+          
+          if (remoteTime > localTime) {
+            mergedMap.set(r.id, { ...local, ...r });
+          }
+          // Si localTime >= remoteTime, mantenemos local para no revertir cambios del Super Admin
         }
       }
     });
@@ -67,16 +77,24 @@ export async function pullClinicsFromCloud(): Promise<{ success: boolean; count:
     const finalList = Array.from(mergedMap.values());
     saveAllClinics(finalList, false);
 
+    // 3. Sincronizar datos de contacto de Fernando SOLO si los datos remotos son estrictamente más nuevos
     if (data?.adminContact && typeof data.adminContact === 'object') {
-      saveAdminContactInfo(data.adminContact, false);
+      const localContact = getAdminContactInfo();
+      const remoteContact = data.adminContact;
+      const remoteContactTime = new Date(remoteContact.updatedAt || 0).getTime();
+      const localContactTime = new Date(localContact.updatedAt || 0).getTime();
+
+      if (remoteContactTime > localContactTime) {
+        saveAdminContactInfo(remoteContact, false);
+      }
     }
 
     localStorage.setItem(CLOUD_CACHE_TIMESTAMP_KEY, new Date().toISOString());
 
-    // Si la lista local tenía consultorios históricos no presentes en la nube, subirlos de inmediato
+    // Si la lista local tenía consultorios o cambios no presentes en la nube, subirlos
     const remoteIdSet = new Set(remoteList.map(r => r.id));
-    const needsUpload = localList.some(l => !remoteIdSet.has(l.id));
-    if (needsUpload && finalList.length > 0) {
+    const hasNewLocal = localList.some(l => !remoteIdSet.has(l.id));
+    if (hasNewLocal && finalList.length > 0) {
       setTimeout(() => {
         pushClinicsToCloud(finalList).catch(() => {});
       }, 300);
@@ -90,19 +108,20 @@ export async function pullClinicsFromCloud(): Promise<{ success: boolean; count:
   }
 }
 
-// 2. Subir Consultorios A la Nube (Push Automático Multi-Dispositivo)
+// 2. Subir Consultorios A la Nube (Push Inmediato y Autoritario del Super Admin)
 export async function pushClinicsToCloud(clinicsToUpload?: ClinicAccount[]): Promise<{ success: boolean; error?: string }> {
   if (isPushing) return { success: true };
   isPushing = true;
 
   try {
     const list = clinicsToUpload || getAllClinics();
+    const deletedIds = getDeletedClinicIds();
+    const cleanList = list.filter(c => !deletedIds.has(c.id));
     const adminContact = getAdminContactInfo();
     const token = getAuthToken();
 
     // 1. Obtener el SHA actual del archivo en GitHub para permitir sobreescritura
     let currentSha: string | null = null;
-    let remoteClinics: ClinicAccount[] = [];
 
     try {
       const existingRes = await fetch(API_URL, {
@@ -116,29 +135,14 @@ export async function pushClinicsToCloud(clinicsToUpload?: ClinicAccount[]): Pro
       if (existingRes.ok) {
         const existingData = await existingRes.json();
         currentSha = existingData.sha;
-        if (existingData.content) {
-          try {
-            const decoded = atob(existingData.content.replace(/\s/g, ''));
-            const parsed = JSON.parse(decoded);
-            if (Array.isArray(parsed?.clinics)) {
-              remoteClinics = parsed.clinics;
-            }
-          } catch (e) {}
-        }
       }
     } catch (e) {}
-
-    // 2. Fusionar consultorios locales con remotos para nunca borrar ninguno
-    const mergedMap = new Map<string, ClinicAccount>();
-    remoteClinics.forEach(r => mergedMap.set(r.id, r));
-    list.forEach(c => mergedMap.set(c.id, c));
-    const mergedList = Array.from(mergedMap.values());
 
     const payload = {
       superAdmin: 'Fernando01',
       updatedAt: new Date().toISOString(),
       adminContact,
-      clinics: mergedList
+      clinics: cleanList
     };
 
     const jsonStr = JSON.stringify(payload, null, 2);
@@ -151,7 +155,7 @@ export async function pushClinicsToCloud(clinicsToUpload?: ClinicAccount[]): Pro
     const base64Content = btoa(binary);
 
     const putBody: any = {
-      message: 'feat: Central cloud database synchronization for clinics',
+      message: 'feat: Update cloud clinics and licenses state',
       content: base64Content
     };
     if (currentSha) {

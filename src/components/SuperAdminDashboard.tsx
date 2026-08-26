@@ -156,9 +156,11 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingClinic) return;
+    const nowStr = new Date().toISOString();
+    const freshClinic = { ...editingClinic, updatedAt: nowStr };
     const all = getAllClinics();
-    const updated = all.map(c => c.id === editingClinic.id ? editingClinic : c);
-    saveAllClinics(updated);
+    const updated = all.map(c => c.id === editingClinic.id ? freshClinic : c);
+    saveAllClinics(updated, true);
     setClinics(updated);
     setEditingClinic(null);
   };
