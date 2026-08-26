@@ -21,7 +21,8 @@ import {
   Calendar,
   AlertCircle,
   RefreshCw,
-  Plus
+  Plus,
+  Database
 } from 'lucide-react';
 import { ClinicAccount, AdminContactInfo } from '../types';
 import {
@@ -72,6 +73,21 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
     setAdminContact(getAdminContactInfo());
     setLastSyncTime(getLastCloudSyncTime());
     setTimeout(() => setIsRefreshing(false), 300);
+  };
+
+  // Función de escaneo profundo y recuperación de consultorios previos
+  const handleDeepScan = async () => {
+    setIsRefreshing(true);
+    const recovered = getAllClinics();
+    setClinics(recovered);
+    const pushResult = await pushClinicsToCloud(recovered);
+    setLastSyncTime(getLastCloudSyncTime());
+    setIsRefreshing(false);
+    if (pushResult.success) {
+      alert(`✅ Escaneo y recuperación completada:\n\nSe detectaron ${recovered.length} consultorios y se sincronizaron con éxito en la nube.`);
+    } else {
+      alert(`ℹ️ Se recuperaron ${recovered.length} consultorios en la memoria local.`);
+    }
   };
 
   // Sincronización automática con la nube al entrar y en tiempo real
@@ -304,6 +320,17 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
             >
               <UserCog className="w-3.5 h-3.5 text-amber-400" />
               <span>Mis Datos de Contacto</span>
+            </button>
+
+            {/* Deep Scan Historical Clinics */}
+            <button
+              type="button"
+              onClick={handleDeepScan}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/40 text-xs font-bold transition-all shadow-sm"
+              title="Escanear y recuperar automáticamente todas las clínicas y consultorios creados antes de los cambios y subirlos a la nube"
+            >
+              <Database className="w-3.5 h-3.5 text-purple-400" />
+              <span>Recuperar Previos</span>
             </button>
 
             {/* Import Backup */}

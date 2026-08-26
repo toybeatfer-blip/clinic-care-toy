@@ -125,12 +125,12 @@ export function clearSession(): void {
   }
 }
 
-// 4. REGISTRO MAESTRO DE CONSULTORIOS (DURACIÓN DE 1 MES)
+// 4. REGISTRO MAESTRO DE CONSULTORIOS (CON ESCÁNER HISTÓRICO PROFUNDO)
 export function getAllClinics(): ClinicAccount[] {
   try {
     const clinicsMap = new Map<string, ClinicAccount>();
 
-    // 1. Cargar del registro principal
+    // 1. Cargar del registro principal actual v2
     const raw = localStorage.getItem(MASTER_CLINICS_KEY);
     if (raw) {
       try {
@@ -143,8 +143,8 @@ export function getAllClinics(): ClinicAccount[] {
       } catch (e) {}
     }
 
-    // 2. Cargar de claves anteriores si existen
-    const legacyKeys = ['clinic_care_clinics_master_v1', 'clinic_care_clinics_master'];
+    // 2. Cargar de claves históricas maestras (v1, v0)
+    const legacyKeys = ['clinic_care_clinics_master_v1', 'clinic_care_clinics_master', 'clinics_master_v1'];
     legacyKeys.forEach(k => {
       const leg = localStorage.getItem(k);
       if (leg) {
@@ -161,43 +161,80 @@ export function getAllClinics(): ClinicAccount[] {
       }
     });
 
-    // 3. Escaneo inteligente de recuperación de consultorios huérfanos en localStorage
+    // 3. Escanear configuraciones de consultorios individuales en localStorage
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && key.startsWith('clinic_care_settings_clinic_')) {
-        const cId = key.replace('clinic_care_settings_clinic_', '').replace('_v2', '');
+      if (!key) continue;
+
+      if (key.startsWith('clinic_care_settings_clinic_') || key.startsWith('clinic_care_records_clinic_')) {
+        const cId = key.replace('clinic_care_settings_clinic_', '').replace('clinic_care_records_clinic_', '').replace('_v2', '');
         if (cId && !clinicsMap.has(cId)) {
           try {
-            const settingsRaw = localStorage.getItem(key);
+            const settingsKey = `clinic_care_settings_clinic_${cId}_v2`;
+            const settingsRaw = localStorage.getItem(settingsKey) || localStorage.getItem(`clinic_care_settings_clinic_${cId}`);
+            let s: any = {};
             if (settingsRaw) {
-              const s = JSON.parse(settingsRaw);
-              const recovered: ClinicAccount = {
-                id: cId,
-                clinicName: s.nombreClinica || 'Consultorio Médico',
-                username: `usuario_${cId.substring(0, 6)}`,
-                passwordPlain: '1234',
-                doctorName: s.doctorName || 'Médico Responsable',
-                prefix: s.prefix || 'Dr.',
-                cedulaGeneral: s.cedulaGeneral || '',
-                cedulaEspecialidad: s.cedulaEspecialidad || '',
-                especialidad: s.especialidad || 'Medicina General',
-                universidad: s.universidad || '',
-                telefono: s.telefonoContacto || '',
-                correo: s.correoContacto || '',
-                direccion: s.direccionClinica || '',
-                sucursal: s.sucursal || '',
-                logoUrl: s.logoUrl || '',
-                primaryColor: s.primaryColor || 'sky',
-                createdAt: new Date().toISOString(),
-                lastLoginAt: new Date().toISOString(),
-                licenseStatus: 'active',
-                licenseValidUntil: 'Indefinida'
-              };
-              clinicsMap.set(cId, recovered);
+              s = JSON.parse(settingsRaw);
             }
+
+            const recovered: ClinicAccount = {
+              id: cId,
+              clinicName: s.nombreClinica || `Consultorio ${cId.substring(0, 8)}`,
+              username: s.username || `consultorio_${cId.substring(0, 6)}`,
+              passwordPlain: s.passwordPlain || '1234',
+              doctorName: s.doctorName || 'Médico Responsable',
+              prefix: s.prefix || 'Dr.',
+              cedulaGeneral: s.cedulaGeneral || '',
+              cedulaEspecialidad: s.cedulaEspecialidad || '',
+              especialidad: s.especialidad || 'Medicina General',
+              universidad: s.universidad || '',
+              telefono: s.telefonoContacto || '',
+              correo: s.correoContacto || '',
+              direccion: s.direccionClinica || '',
+              sucursal: s.sucursal || '',
+              logoUrl: s.logoUrl || '',
+              primaryColor: s.primaryColor || 'sky',
+              createdAt: new Date().toISOString(),
+              lastLoginAt: new Date().toISOString(),
+              licenseStatus: 'active',
+              licenseValidUntil: 'Indefinida'
+            };
+            clinicsMap.set(cId, recovered);
           } catch (e) {}
         }
       }
+    }
+
+    // 4. Escaneo de configuración original única previa a multi-tenant
+    const singleSettingsRaw = localStorage.getItem('clinic_care_toy_settings_v1') || localStorage.getItem('clinic_care_settings');
+    if (singleSettingsRaw && !clinicsMap.has('clinic_principal')) {
+      try {
+        const s = JSON.parse(singleSettingsRaw);
+        if (s.doctorName || s.nombreClinica) {
+          clinicsMap.set('clinic_principal', {
+            id: 'clinic_principal',
+            clinicName: s.nombreClinica || 'Consultorio Principal',
+            username: 'consultorio1',
+            passwordPlain: '1234',
+            doctorName: s.doctorName || 'Médico Titular',
+            prefix: s.prefix || 'Dr.',
+            cedulaGeneral: s.cedulaGeneral || '',
+            cedulaEspecialidad: s.cedulaEspecialidad || '',
+            especialidad: s.especialidad || 'Medicina General',
+            universidad: s.universidad || '',
+            telefono: s.telefonoContacto || '',
+            correo: s.correoContacto || '',
+            direccion: s.direccionClinica || '',
+            sucursal: s.sucursal || 'Matriz',
+            logoUrl: s.logoUrl || '',
+            primaryColor: s.primaryColor || 'sky',
+            createdAt: new Date().toISOString(),
+            lastLoginAt: new Date().toISOString(),
+            licenseStatus: 'active',
+            licenseValidUntil: 'Indefinida'
+          });
+        }
+      } catch (e) {}
     }
 
     const list = Array.from(clinicsMap.values());

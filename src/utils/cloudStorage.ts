@@ -44,41 +44,46 @@ export async function pullClinicsFromCloud(): Promise<{ success: boolean; count:
     const data = await res.json();
     const remoteList: ClinicAccount[] = Array.isArray(data?.clinics) ? data.clinics : [];
 
-    if (remoteList.length > 0) {
-      const localList = getAllClinics();
-      const mergedMap = new Map<string, ClinicAccount>();
+    const localList = getAllClinics();
+    const mergedMap = new Map<string, ClinicAccount>();
 
-      // Cargar consultorios locales
-      localList.forEach(c => mergedMap.set(c.id, c));
+    // Cargar consultorios locales (incluyendo recuperados por escaneo histórico)
+    localList.forEach(c => mergedMap.set(c.id, c));
 
-      // Fusionar remotos automáticamente
-      remoteList.forEach(r => {
-        if (!mergedMap.has(r.id)) {
-          mergedMap.set(r.id, r);
-        } else {
-          const local = mergedMap.get(r.id)!;
-          const remoteTime = new Date(r.lastLoginAt || r.createdAt || 0).getTime();
-          const localTime = new Date(local.lastLoginAt || local.createdAt || 0).getTime();
-          if (remoteTime >= localTime) {
-            mergedMap.set(r.id, { ...local, ...r });
-          }
+    // Fusionar remotos automáticamente
+    remoteList.forEach(r => {
+      if (!mergedMap.has(r.id)) {
+        mergedMap.set(r.id, r);
+      } else {
+        const local = mergedMap.get(r.id)!;
+        const remoteTime = new Date(r.lastLoginAt || r.createdAt || 0).getTime();
+        const localTime = new Date(local.lastLoginAt || local.createdAt || 0).getTime();
+        if (remoteTime >= localTime) {
+          mergedMap.set(r.id, { ...local, ...r });
         }
-      });
-
-      const finalList = Array.from(mergedMap.values());
-      saveAllClinics(finalList, false);
-
-      if (data?.adminContact && typeof data.adminContact === 'object') {
-        saveAdminContactInfo(data.adminContact, false);
       }
+    });
 
-      localStorage.setItem(CLOUD_CACHE_TIMESTAMP_KEY, new Date().toISOString());
-      isPulling = false;
-      return { success: true, count: finalList.length };
+    const finalList = Array.from(mergedMap.values());
+    saveAllClinics(finalList, false);
+
+    if (data?.adminContact && typeof data.adminContact === 'object') {
+      saveAdminContactInfo(data.adminContact, false);
+    }
+
+    localStorage.setItem(CLOUD_CACHE_TIMESTAMP_KEY, new Date().toISOString());
+
+    // Si la lista local tenía consultorios históricos no presentes en la nube, subirlos de inmediato
+    const remoteIdSet = new Set(remoteList.map(r => r.id));
+    const needsUpload = localList.some(l => !remoteIdSet.has(l.id));
+    if (needsUpload && finalList.length > 0) {
+      setTimeout(() => {
+        pushClinicsToCloud(finalList).catch(() => {});
+      }, 300);
     }
 
     isPulling = false;
-    return { success: true, count: getAllClinics().length };
+    return { success: true, count: finalList.length };
   } catch (err: any) {
     isPulling = false;
     return { success: false, count: 0, error: err?.message || 'Error de red' };
