@@ -36,12 +36,14 @@ export const PatientTimelineModal: React.FC<PatientTimelineModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Group records by patient
+  // Group records by patient safely
   const patientGroups: { [key: string]: { name: string; curp: string; records: ClinicalRecord[] } } = {};
 
-  allRecords.forEach((rec) => {
-    const name = `${rec.identification.nombres || ''} ${rec.identification.apellidoPaterno || ''} ${rec.identification.apellidoMaterno || ''}`.trim() || 'Paciente Sin Nombre';
-    const curp = rec.identification.curp || rec.identification.rfc || '';
+  (allRecords || []).forEach((rec) => {
+    if (!rec) return;
+    const id = rec.identification || ({} as any);
+    const name = `${id.nombres || ''} ${id.apellidoPaterno || ''} ${id.apellidoMaterno || ''}`.trim() || 'Paciente Sin Nombre';
+    const curp = id.curp || id.rfc || '';
     const key = curp ? curp.toUpperCase() : name.toLowerCase();
 
     if (!patientGroups[key]) {
@@ -52,7 +54,11 @@ export const PatientTimelineModal: React.FC<PatientTimelineModalProps> = ({
 
   // Sort records inside each group chronologically (newest first)
   Object.values(patientGroups).forEach((group) => {
-    group.records.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    group.records.sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return timeB - timeA;
+    });
   });
 
   const patientKeys = Object.keys(patientGroups);

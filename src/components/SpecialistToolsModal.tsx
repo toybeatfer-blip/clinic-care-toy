@@ -60,6 +60,7 @@ export const SpecialistToolsModal: React.FC<SpecialistToolsModalProps> = ({
   let diasGestacion = 0;
   let trimestre = '';
   let obstetricSummary = '';
+  let obstetricError = '';
 
   if (fumDate) {
     try {
@@ -73,7 +74,9 @@ export const SpecialistToolsModal: React.FC<SpecialistToolsModalProps> = ({
         const diffTime = today.getTime() - fum.getTime();
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-        if (diffDays >= 0) {
+        if (diffDays < 0) {
+          obstetricError = 'La fecha de FUM no puede ser posterior a la fecha actual.';
+        } else {
           semanasGestacion = Math.floor(diffDays / 7);
           diasGestacion = diffDays % 7;
 
@@ -84,30 +87,34 @@ export const SpecialistToolsModal: React.FC<SpecialistToolsModalProps> = ({
           obstetricSummary = `FUM: ${fumDate} | FPP: ${fppDateStr} | Edad Gestacional: ${semanasGestacion}.${diasGestacion} SDG (${trimestre}).`;
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      obstetricError = 'Fecha de FUM no válida.';
+    }
   }
 
-  // CÁLCULOS PEDIATRÍA
-  const wNum = parseFloat(pedWeight) || 0;
-  const doseMgKgNum = parseFloat(pedDoseMgKg) || 0;
-  const presMgNum = parseFloat(pedPresentationMg) || 1;
-  const presMlNum = parseFloat(pedPresentationMl) || 1;
+  // CÁLCULOS PEDIATRÍA CON GUARDA CONTRA DIVISIÓN ENTRE CERO
+  const wNum = Math.max(0, parseFloat(pedWeight) || 0);
+  const doseMgKgNum = Math.max(0, parseFloat(pedDoseMgKg) || 0);
+  const presMgNum = Math.max(0.001, parseFloat(pedPresentationMg) || 250);
+  const presMlNum = Math.max(0.001, parseFloat(pedPresentationMl) || 5);
 
   const totalMgDay = wNum * doseMgKgNum;
   const mgPerDose = pedFrequency > 0 ? totalMgDay / pedFrequency : totalMgDay;
-  const mlPerDose = (mgPerDose * presMlNum) / presMgNum;
+  const rawMlPerDose = (mgPerDose * presMlNum) / presMgNum;
+  const mlPerDose = isNaN(rawMlPerDose) || !isFinite(rawMlPerDose) || rawMlPerDose < 0 ? 0 : rawMlPerDose;
   const intervalHours = pedFrequency === 4 ? 6 : pedFrequency === 3 ? 8 : pedFrequency === 2 ? 12 : 24;
 
-  const pediatricSummary = `${pedDrugName} Suspensión (${pedPresentationMg}mg/${pedPresentationMl}ml): Dar ${mlPerDose.toFixed(1)} ml vía oral cada ${intervalHours} horas (Dosis calculada a ${pedDoseMgKg} mg/kg/día para peso de ${pedWeight} kg).`;
+  const pediatricSummary = `${pedDrugName || 'Medicamento'} Suspensión (${pedPresentationMg}mg/${pedPresentationMl}ml): Dar ${mlPerDose.toFixed(1)} ml vía oral cada ${intervalHours} horas (Dosis calculada a ${pedDoseMgKg} mg/kg/día para peso de ${pedWeight} kg).`;
 
-  // CÁLCULOS NEFRO (Cockcroft-Gault)
-  const crNum = parseFloat(serumCreatinine) || 1.0;
-  const rAgeNum = parseFloat(patientYears) || 50;
-  const rWNum = parseFloat(renalWeight) || 70;
+  // CÁLCULOS NEFRO (Cockcroft-Gault) CON GUARDA
+  const crNum = Math.max(0.1, parseFloat(serumCreatinine) || 1.0);
+  const rAgeNum = Math.max(1, parseFloat(patientYears) || 50);
+  const rWNum = Math.max(1, parseFloat(renalWeight) || 70);
 
   // Cockcroft-Gault = [(140 - Edad) * Peso] / (72 * CrS) * (0.85 si es mujer)
-  let clcr = ((140 - rAgeNum) * rWNum) / (72 * crNum);
-  if (patientGender === 'F') clcr *= 0.85;
+  let rawClcr = ((140 - rAgeNum) * rWNum) / (72 * crNum);
+  if (patientGender === 'F') rawClcr *= 0.85;
+  const clcr = isNaN(rawClcr) || !isFinite(rawClcr) || rawClcr < 0 ? 0 : rawClcr;
   const clcrStr = clcr.toFixed(1);
 
   let kdigoStage = '';
@@ -132,10 +139,11 @@ export const SpecialistToolsModal: React.FC<SpecialistToolsModalProps> = ({
     kdigoDesc = 'Terapia de sustitución renal / diálisis.';
   }
 
-  // CÁLCULO TAM (Tensión Arterial Media)
-  const tas = parseFloat(bpSystolic) || 120;
-  const tad = parseFloat(bpDiastolic) || 80;
-  const tam = (2 * tad + tas) / 3;
+  // CÁLCULO TAM (Tensión Arterial Media) CON GUARDA
+  const tas = Math.max(0, parseFloat(bpSystolic) || 120);
+  const tad = Math.max(0, parseFloat(bpDiastolic) || 80);
+  const rawTam = (2 * tad + tas) / 3;
+  const tam = isNaN(rawTam) || !isFinite(rawTam) || rawTam < 0 ? 0 : rawTam;
   const tamStr = tam.toFixed(1);
   const isTamNormal = tam >= 70 && tam <= 105;
 
@@ -252,7 +260,13 @@ export const SpecialistToolsModal: React.FC<SpecialistToolsModalProps> = ({
                 </div>
               </div>
 
-              {fumDate && (
+              {obstetricError && (
+                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-200 border border-amber-200 text-xs font-semibold">
+                  ⚠️ {obstetricError}
+                </div>
+              )}
+
+              {fumDate && !obstetricError && (
                 <div className="p-4 rounded-xl bg-gradient-to-br from-rose-50 to-pink-50 dark:from-rose-950/30 dark:to-pink-950/30 border border-rose-200 dark:border-rose-800 space-y-3">
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
                     <div>
