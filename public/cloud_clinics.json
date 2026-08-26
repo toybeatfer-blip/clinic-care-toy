@@ -1,0 +1,13 @@
+{
+    "updatedAt":  "2026-08-25T22:59:03.6403206-06:00",
+    "adminContact":  {
+                         "phoneWhatsApp":  "55 1234 5678",
+                         "adminName":  "Fernando (Super Administrador)",
+                         "email":  "toybeatfer@gmail.com",
+                         "helpMessage":  "Para renovar tu licencia mensual o resolver dudas sobre tu cuenta de consultorio, comunícate directamente con el administrador del sistema."
+                     },
+    "clinics":  [
+
+                ],
+    "superAdmin":  "Fernando01"
+}
