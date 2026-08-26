@@ -525,6 +525,14 @@ export function getBlankClinicalRecord(): ClinicalRecord {
         miembros: '',
         genitales: 'Diferido'
       },
+      estudiosDiagnostico: {
+        laboratorios: '',
+        rayosX: '',
+        ultrasonido: '',
+        tomografiaTac: '',
+        otrosEstudios: '',
+        interpretacionHallazgos: ''
+      },
       diagnosticoCie10: '',
       diagnosticoSecundario: '',
       pronostico: '',
@@ -535,6 +543,14 @@ export function getBlankClinicalRecord(): ClinicalRecord {
       diagnosticoSeguimiento: '',
       evolucionCuadroClinico: '',
       exploracionFisicaDirigida: '',
+      estudiosDiagnostico: {
+        laboratorios: '',
+        rayosX: '',
+        ultrasonido: '',
+        tomografiaTac: '',
+        otrosEstudios: '',
+        interpretacionHallazgos: ''
+      },
       diagnosticoActualizado: '',
       planTerapeutico: '',
       vitalSigns: {
@@ -585,6 +601,10 @@ export function deepMergeBlank(rawRecord: any): ClinicalRecord {
         ...blank.historyCheckup.physicalExam,
         ...(rawRecord.historyCheckup?.physicalExam || {})
       },
+      estudiosDiagnostico: {
+        ...blank.historyCheckup.estudiosDiagnostico,
+        ...(rawRecord.historyCheckup?.estudiosDiagnostico || {})
+      },
       prescripcion: Array.isArray(rawRecord.historyCheckup?.prescripcion)
         ? rawRecord.historyCheckup.prescripcion
         : []
@@ -595,6 +615,10 @@ export function deepMergeBlank(rawRecord: any): ClinicalRecord {
       vitalSigns: {
         ...blank.evolutionNote.vitalSigns,
         ...(rawRecord.evolutionNote?.vitalSigns || {})
+      },
+      estudiosDiagnostico: {
+        ...blank.evolutionNote.estudiosDiagnostico,
+        ...(rawRecord.evolutionNote?.estudiosDiagnostico || {})
       }
     },
     procedure: {

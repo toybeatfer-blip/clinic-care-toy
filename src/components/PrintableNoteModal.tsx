@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Printer, Stethoscope, Pill, Check, Building2, User, Phone, Mail } from 'lucide-react';
+import { X, Printer, Stethoscope, Pill, Check, Building2, User, Phone, Mail, FlaskConical } from 'lucide-react';
 import { ClinicalRecord, DoctorSettings } from '../types';
 
 interface PrintableNoteModalProps {
@@ -162,6 +162,52 @@ export const PrintableNoteModal: React.FC<PrintableNoteModalProps> = ({
                 {hc.interrogatorioAparatos}
               </p>
             </div>
+
+            {/* Estudios de Laboratorio y Gabinete Aportados */}
+            {(() => {
+              const est = record.activeModule === 'modulo3' ? record.evolutionNote.estudiosDiagnostico : hc.estudiosDiagnostico;
+              const hasStudies = Boolean(
+                est?.laboratorios?.trim() ||
+                est?.rayosX?.trim() ||
+                est?.ultrasonido?.trim() ||
+                est?.tomografiaTac?.trim() ||
+                est?.otrosEstudios?.trim() ||
+                est?.interpretacionHallazgos?.trim()
+              );
+
+              if (!hasStudies) return null;
+
+              return (
+                <div className="border-t border-slate-200 pt-3">
+                  <strong className="text-slate-800 uppercase block font-bold text-[11px] mb-1.5 flex items-center gap-1.5">
+                    <FlaskConical className="w-3.5 h-3.5 text-teal-700" />
+                    <span>Estudios Auxiliares de Diagnóstico Aportados (Laboratorio y Gabinete):</span>
+                  </strong>
+                  <div className="bg-teal-50/40 rounded-lg p-2.5 border border-teal-200 text-xs space-y-1 text-slate-800">
+                    {est?.laboratorios?.trim() && (
+                      <p><strong>Laboratorios:</strong> {est.laboratorios.trim()}</p>
+                    )}
+                    {est?.rayosX?.trim() && (
+                      <p><strong>Rayos X (RX):</strong> {est.rayosX.trim()}</p>
+                    )}
+                    {est?.ultrasonido?.trim() && (
+                      <p><strong>Ultrasonido (USG):</strong> {est.ultrasonido.trim()}</p>
+                    )}
+                    {est?.tomografiaTac?.trim() && (
+                      <p><strong>Tomografía (TAC):</strong> {est.tomografiaTac.trim()}</p>
+                    )}
+                    {est?.otrosEstudios?.trim() && (
+                      <p><strong>Otros Estudios (RMN/ECG):</strong> {est.otrosEstudios.trim()}</p>
+                    )}
+                    {est?.interpretacionHallazgos?.trim() && (
+                      <p className="border-t border-teal-200/60 pt-1 text-teal-950 font-medium">
+                        <strong>Interpretación / Conclusión:</strong> {est.interpretacionHallazgos.trim()}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
 
             <div className="border-t border-slate-200 pt-3">
               <strong className="text-slate-800 uppercase block font-bold text-[11px] mb-1">

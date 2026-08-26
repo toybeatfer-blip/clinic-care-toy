@@ -5,6 +5,7 @@ import { CopyButton } from './CopyButton';
 import { generateModule2Text, calculateIMC, formatTallaInput } from '../utils/nom004Validator';
 import { CIE10_CATALOG } from '../data/cie10Catalog';
 import { MEDICATION_CATALOG } from '../data/medicationCatalog';
+import { DiagnosticStudiesCard } from './DiagnosticStudiesCard';
 import {
   FileHeart,
   Activity,
@@ -364,6 +365,14 @@ export const Module2HistoryCheckup: React.FC<Module2HistoryCheckupProps> = ({
           />
         </div>
       </div>
+
+      {/* Estudios de Laboratorio y Gabinete Aportados por el Paciente */}
+      <DiagnosticStudiesCard
+        data={data.estudiosDiagnostico}
+        onChange={(updatedStudies) => updateField('estudiosDiagnostico', updatedStudies)}
+        title="Estudios de Laboratorio y Gabinete Aportados por el Paciente"
+        subtitle="Registro detallado de Laboratorios Clínicos, Rayos X (RX), Ultrasonido (USG), Tomografía (TAC) y RMN"
+      />
 
       {/* Diagnóstico (CIE-10) y Pronóstico */}
       <div className="p-5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">

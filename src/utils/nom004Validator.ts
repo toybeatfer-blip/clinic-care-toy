@@ -250,6 +250,21 @@ export function generateModule2Text(data?: HistoryCheckupData | null): string {
   const taDisplay = v.taPediatricaBadge ? `${v.taPediatricaBadge}` : `${v.taSistolica || '120'}/${v.taDiastolica || '80'}`;
   const spo2Display = v.satO2 ? ` | SpO2: ${v.satO2}%` : ' | SpO2: 98%';
 
+  const est = data.estudiosDiagnostico;
+  let estudiosText = '';
+  if (est) {
+    const lines: string[] = [];
+    if (est.laboratorios?.trim()) lines.push(`  - Laboratorios Clínicos: ${est.laboratorios.trim()}`);
+    if (est.rayosX?.trim()) lines.push(`  - Rayos X (RX): ${est.rayosX.trim()}`);
+    if (est.ultrasonido?.trim()) lines.push(`  - Ultrasonido (USG): ${est.ultrasonido.trim()}`);
+    if (est.tomografiaTac?.trim()) lines.push(`  - Tomografía Computarizada (TAC): ${est.tomografiaTac.trim()}`);
+    if (est.otrosEstudios?.trim()) lines.push(`  - Otros Estudios (RMN / ECG): ${est.otrosEstudios.trim()}`);
+    if (est.interpretacionHallazgos?.trim()) lines.push(`  - Interpretación / Conclusión Médica: ${est.interpretacionHallazgos.trim()}`);
+    if (lines.length > 0) {
+      estudiosText = `\n\n* Estudios Previos / Aportados (Laboratorio y Gabinete):\n${lines.join('\n')}`;
+    }
+  }
+
   return `* Padecimiento Actual:
   ${data.padecimientoActual || 'Acude a valoración médica general.'}
 
@@ -263,7 +278,7 @@ export function generateModule2Text(data?: HistoryCheckupData | null): string {
   - Tórax: ${pe.torax || 'Normolíneo, con adecuada amplexión y amplexación, campos pulmonares bien ventilados sin estertores ni sibilancias, ruidos cardiacos rítmicos de buen tono e intensidad sin soplos agregados.'}
   - Abdomen: ${pe.abdomen || 'Plano, blando, depresible, no doloroso a la palpación superficial ni profunda, ruidos peristálticos presentes normales, sin visceromegalias ni datos de irritación peritoneal.'}
   - Miembros: ${pe.miembros || 'Torácicos y pélvicos íntegros, simétricos, arcos de movilidad conservados, pulsos periféricos presentes de adecuada intensidad, sin edema y llenado capilar distal inmediato.'}
-  - Genitales: Diferido
+  - Genitales: Diferido${estudiosText}
 
 * Diagnóstico (CIE-10):
   ${data.diagnosticoCie10 || 'Z00.0 - Examen médico general (Chequeo general / Rutina)'}${data.diagnosticoSecundario ? `\n  ${data.diagnosticoSecundario}` : ''}
@@ -284,6 +299,21 @@ export function generateModule3Text(data?: EvolutionNoteData | null): string {
   const taDisplay = v?.taPediatricaBadge ? `${v.taPediatricaBadge}` : `${v?.taSistolica || '120'}/${v?.taDiastolica || '80'}`;
   const spo2Display = v?.satO2 ? ` | SpO2: ${v.satO2}%` : ' | SpO2: 98%';
 
+  const est = data.estudiosDiagnostico;
+  let estudiosText = '';
+  if (est) {
+    const lines: string[] = [];
+    if (est.laboratorios?.trim()) lines.push(`  - Laboratorios Clínicos: ${est.laboratorios.trim()}`);
+    if (est.rayosX?.trim()) lines.push(`  - Rayos X (RX): ${est.rayosX.trim()}`);
+    if (est.ultrasonido?.trim()) lines.push(`  - Ultrasonido (USG): ${est.ultrasonido.trim()}`);
+    if (est.tomografiaTac?.trim()) lines.push(`  - Tomografía Computarizada (TAC): ${est.tomografiaTac.trim()}`);
+    if (est.otrosEstudios?.trim()) lines.push(`  - Otros Estudios (RMN / ECG): ${est.otrosEstudios.trim()}`);
+    if (est.interpretacionHallazgos?.trim()) lines.push(`  - Interpretación / Conclusión Médica: ${est.interpretacionHallazgos.trim()}`);
+    if (lines.length > 0) {
+      estudiosText = `\n\n* Estudios de Laboratorio y Gabinete Aportados:\n${lines.join('\n')}`;
+    }
+  }
+
   return `* Diagnóstico de Seguimiento:
   ${data.diagnosticoSeguimiento || 'Seguimiento de consulta previa.'}
 
@@ -294,7 +324,7 @@ export function generateModule3Text(data?: EvolutionNoteData | null): string {
   ${data.evolucionCuadroClinico || 'Paciente acude a revaloración médica. Refiere adecuada respuesta y tolerancia al tratamiento previo, con disminución progresiva de la sintomatología.'}
 
 * Exploración Física Dirigida:
-  ${data.exploracionFisicaDirigida || 'Paciente consciente, orientado, adecuada hidratación. Exploración dirigida sin datos patológicos agudos agregados.'}
+  ${data.exploracionFisicaDirigida || 'Paciente consciente, orientado, adecuada hidratación. Exploración dirigida sin datos patológicos agudos agregados.'}${estudiosText}
 
 * Diagnóstico Actualizado:
   ${data.diagnosticoActualizado || 'Diagnóstico de control y seguimiento.'}

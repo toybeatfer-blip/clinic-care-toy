@@ -178,6 +178,30 @@ export function parseRawMedicalNote(rawText: string, existingRecord?: ClinicalRe
   let abdomen = 'Blando, depresible, no doloroso a la palpación superficial ni profunda, ruidos peristálticos presentes de tono y frecuencia normal, sin datos de irritación peritoneal.';
   let miembros = 'Íntegros, simétricos, arcos de movilidad conservados, pulsos periféricos palpables y simétricos, sin edema de miembros pélvicos, llenado capilar inmediato.';
 
+  // 8. Detectar mención de estudios previos (Labs, RX, USG, TAC)
+  let parsedLaboratorios = '';
+  let parsedRx = '';
+  let parsedUsg = '';
+  let parsedTac = '';
+  let parsedOtros = '';
+  let parsedInterp = '';
+
+  const labMatch = text.match(/(?:laboratorio|laboratorios|labs|bh|qu[ií]mica sangu[ií]nea|ego|biometr[ií]a|glucosa en ayuno)[\s:]*([^\n.;]+)/i);
+  if (labMatch) parsedLaboratorios = labMatch[0].trim();
+
+  const rxMatch = text.match(/(?:rx|rayos x|radiograf[ií]a|placa)[\s:]*([^\n.;]+)/i);
+  if (rxMatch) parsedRx = rxMatch[0].trim();
+
+  const usgMatch = text.match(/(?:usg|ultrasonido|ecograf[ií]a|eco)[\s:]*([^\n.;]+)/i);
+  if (usgMatch) parsedUsg = usgMatch[0].trim();
+
+  const tacMatch = text.match(/(?:tac|tomograf[ií]a|tc)[\s:]*([^\n.;]+)/i);
+  if (tacMatch) parsedTac = tacMatch[0].trim();
+
+  if (parsedLaboratorios || parsedRx || parsedUsg || parsedTac) {
+    parsedInterp = 'Estudios aportados por el paciente se correlacionan clínicamente con el diagnóstico y evolución del cuadro actual.';
+  }
+
   return {
     identification: {
       nombres: detectedName || existingRecord?.identification.nombres || '',
@@ -231,6 +255,14 @@ export function parseRawMedicalNote(rawText: string, existingRecord?: ClinicalRe
         abdomen: abdomen,
         miembros: miembros,
         genitales: 'Diferido'
+      },
+      estudiosDiagnostico: {
+        laboratorios: parsedLaboratorios || existingRecord?.historyCheckup.estudiosDiagnostico?.laboratorios || '',
+        rayosX: parsedRx || existingRecord?.historyCheckup.estudiosDiagnostico?.rayosX || '',
+        ultrasonido: parsedUsg || existingRecord?.historyCheckup.estudiosDiagnostico?.ultrasonido || '',
+        tomografiaTac: parsedTac || existingRecord?.historyCheckup.estudiosDiagnostico?.tomografiaTac || '',
+        otrosEstudios: parsedOtros || existingRecord?.historyCheckup.estudiosDiagnostico?.otrosEstudios || '',
+        interpretacionHallazgos: parsedInterp || existingRecord?.historyCheckup.estudiosDiagnostico?.interpretacionHallazgos || ''
       },
       diagnosticoCie10: detectedCie10,
       pronostico: 'Favorable para la vida y función.',

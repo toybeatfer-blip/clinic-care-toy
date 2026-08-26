@@ -67,11 +67,21 @@ export interface PrescriptionItem {
   indicacionesAdicionales?: string;
 }
 
+export interface DiagnosticStudiesData {
+  laboratorios?: string; // Biometría hemática, química sanguínea, EGO, glucosa, etc.
+  rayosX?: string;       // RX Tórax, columna, abdomen, huesos, etc.
+  ultrasonido?: string;  // USG abdominal, pélvico, renal, obstétrico, etc.
+  tomografiaTac?: string;// TAC cráneo, tórax, abdomen simple/contrastada, etc.
+  otrosEstudios?: string;// RMN, Electrocardiograma, Espirometría, Endoscopía, etc.
+  interpretacionHallazgos?: string; // Conclusión médica e integración de estudios
+}
+
 export interface HistoryCheckupData {
   padecimientoActual: string;
   interrogatorioAparatos: string;
   vitalSigns: VitalSigns;
   physicalExam: PhysicalExam;
+  estudiosDiagnostico?: DiagnosticStudiesData;
   diagnosticoCie10: string;
   diagnosticoSecundario?: string;
   pronostico: string;
@@ -83,6 +93,7 @@ export interface EvolutionNoteData {
   diagnosticoSeguimiento: string;
   evolucionCuadroClinico: string;
   exploracionFisicaDirigida: string;
+  estudiosDiagnostico?: DiagnosticStudiesData;
   diagnosticoActualizado: string;
   planTerapeutico: string;
   vitalSigns: VitalSigns;

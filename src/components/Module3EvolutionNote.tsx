@@ -3,6 +3,7 @@ import { EvolutionNoteData } from '../types';
 import { FieldWithCopy } from './FieldWithCopy';
 import { CopyButton } from './CopyButton';
 import { generateModule3Text, calculateIMC, formatTallaInput } from '../utils/nom004Validator';
+import { DiagnosticStudiesCard } from './DiagnosticStudiesCard';
 import { ClipboardList, Activity } from 'lucide-react';
 
 interface Module3EvolutionNoteProps {
@@ -164,6 +165,14 @@ export const Module3EvolutionNote: React.FC<Module3EvolutionNoteProps> = ({
             'Sin datos patológicos agudos agregados en la exploración física dirigida.'
           ]}
           required
+        />
+
+        {/* Estudios de Laboratorio y Gabinete en Seguimiento */}
+        <DiagnosticStudiesCard
+          data={data.estudiosDiagnostico}
+          onChange={(updatedStudies) => updateField('estudiosDiagnostico', updatedStudies)}
+          title="Estudios de Laboratorio y Gabinete (Seguimiento / Control)"
+          subtitle="Resultados de control aportados por el paciente en esta revaloración (RX, USG, TAC, Labs)"
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
