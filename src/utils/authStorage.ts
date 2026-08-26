@@ -7,6 +7,7 @@ const MASTER_CLINICS_KEY = 'clinic_care_clinics_master_v2';
 const SESSION_KEY = 'clinic_care_session_v2';
 const ADMIN_CONTACT_KEY = 'clinic_care_admin_contact_v2';
 export const ADMIN_CONTACT_EVENT = 'clinic_care_admin_contact_updated_v2';
+export const CLINICS_UPDATED_EVENT = 'clinic_care_clinics_updated_v2';
 
 // 1. DATOS DE CONTACTO DEL ADMINISTRADOR
 export function getAdminContactInfo(): AdminContactInfo {
@@ -114,7 +115,17 @@ export function clearSession(): void {
 // 4. REGISTRO MAESTRO DE CONSULTORIOS (DURACIÓN DE 1 MES)
 export function getAllClinics(): ClinicAccount[] {
   try {
-    const raw = localStorage.getItem(MASTER_CLINICS_KEY);
+    let raw = localStorage.getItem(MASTER_CLINICS_KEY);
+    
+    // Recuperar de claves de versiones anteriores si la v2 está vacía
+    if (!raw) {
+      const v1 = localStorage.getItem('clinic_care_clinics_master_v1') || localStorage.getItem('clinic_care_clinics_master');
+      if (v1) {
+        raw = v1;
+        localStorage.setItem(MASTER_CLINICS_KEY, v1);
+      }
+    }
+
     if (!raw) return [];
     const list = JSON.parse(raw);
     if (!Array.isArray(list)) return [];
@@ -123,7 +134,7 @@ export function getAllClinics(): ClinicAccount[] {
       const remaining = getDaysRemaining(c.licenseValidUntil);
       const isExpired = remaining.isExpired;
       return {
-        id: c.id || String(Math.random()),
+        id: c.id || `clinic_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
         clinicName: c.clinicName || 'Consultorio Médico',
         username: c.username || '',
         passwordPlain: c.passwordPlain || '',
@@ -154,12 +165,15 @@ export function getAllClinics(): ClinicAccount[] {
 export function saveAllClinics(clinics: ClinicAccount[]): void {
   try {
     localStorage.setItem(MASTER_CLINICS_KEY, JSON.stringify(clinics));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent(CLINICS_UPDATED_EVENT, { detail: clinics }));
+    }
   } catch (e) {
     console.error('Error saving clinics', e);
   }
 }
 
-export function registerClinic(data: Omit<ClinicAccount, 'id' | 'createdAt' | 'lastLoginAt' | 'licenseStatus' | 'licenseValidUntil'>): { success: boolean; clinic?: ClinicAccount; error?: string } {
+export function registerClinic(data: Omit<ClinicAccount, 'id' | 'createdAt' | 'lastLoginAt' | 'licenseStatus' | 'licenseValidUntil'> & { licenseValidUntil?: string; licenseStatus?: LicenseStatus }): { success: boolean; clinic?: ClinicAccount; error?: string } {
   const clinics = getAllClinics();
   const normalizedUser = (data.username || '').trim().toLowerCase();
 
@@ -171,15 +185,18 @@ export function registerClinic(data: Omit<ClinicAccount, 'id' | 'createdAt' | 'l
     return { success: false, error: 'El nombre de usuario no está disponible.' };
   }
 
-  const existing = clinics.find(c => c.username.trim().toLowerCase() === normalizedUser);
+  const existing = clinics.find(c => (c.username || '').trim().toLowerCase() === normalizedUser);
   if (existing) {
     return { success: false, error: `El usuario "${data.username}" ya está registrado en otro consultorio.` };
   }
 
-  // Duración inicial de exactamente 1 mes (30 días)
-  const expDate = new Date();
-  expDate.setDate(expDate.getDate() + 30);
-  const validUntilStr = expDate.toISOString().slice(0, 10);
+  // Duración inicial de 1 mes (30 días) o la especificada
+  let validUntilStr = data.licenseValidUntil;
+  if (!validUntilStr || validUntilStr === '1_month') {
+    const expDate = new Date();
+    expDate.setDate(expDate.getDate() + 30);
+    validUntilStr = expDate.toISOString().slice(0, 10);
+  }
 
   const newClinic: ClinicAccount = {
     ...data,
@@ -187,7 +204,7 @@ export function registerClinic(data: Omit<ClinicAccount, 'id' | 'createdAt' | 'l
     username: data.username.trim(),
     createdAt: new Date().toISOString(),
     lastLoginAt: new Date().toISOString(),
-    licenseStatus: 'active',
+    licenseStatus: data.licenseStatus || 'active',
     licenseValidUntil: validUntilStr
   };
 
@@ -287,7 +304,7 @@ export function authenticateUser(usernameInput: string, passwordInput: string): 
 
   // Clinic Check
   const clinics = getAllClinics();
-  const found = clinics.find(c => c.username.toLowerCase() === user.toLowerCase());
+  const found = clinics.find(c => (c.username || '').toLowerCase() === user.toLowerCase());
 
   if (!found) {
     return { success: false, error: 'Usuario no encontrado. Verifica el usuario o regístrate.' };
