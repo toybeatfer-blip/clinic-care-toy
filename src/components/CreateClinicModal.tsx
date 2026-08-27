@@ -58,6 +58,7 @@ export const CreateClinicModal: React.FC<CreateClinicModalProps> = ({
       telefono: telefono.trim(),
       correo: correo.trim(),
       direccion: direccion.trim(),
+      primaryColor: 'sky',
       licenseStatus: 'active',
       licenseValidUntil: validUntilStr
     });

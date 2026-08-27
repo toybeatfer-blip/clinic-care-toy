@@ -39,7 +39,9 @@ import {
   BookOpen,
   Sparkles,
   Settings,
-  LogOut
+  LogOut,
+  Calculator,
+  History
 } from 'lucide-react';
 import { CopyButton } from './components/CopyButton';
 import { generateModule1Text, generateModule2Text, generateModule3Text, generateModule4Text } from './utils/nom004Validator';

@@ -95,7 +95,7 @@ export const DiagnosticStudiesCard: React.FC<DiagnosticStudiesCardProps> = ({
             text={generateStudiesSummaryText()}
             label="Copiar Bloque de Estudios"
             size="sm"
-            variant="outline"
+            variant="secondary"
           />
         </div>
       </div>
