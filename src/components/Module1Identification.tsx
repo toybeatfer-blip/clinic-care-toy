@@ -1,9 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { IdentificationData, ClinicalRecord } from '../types';
 import { FieldWithCopy } from './FieldWithCopy';
 import { CopyButton } from './CopyButton';
 import { generateModule1Text } from '../utils/nom004Validator';
-import { UserCheck, MapPin, Phone, FileText, AlertCircle, Copy, CheckCircle2 } from 'lucide-react';
+import { UserCheck, MapPin, Phone, FileText, AlertCircle, Copy, CheckCircle2, Dna, HeartPulse, Sparkles } from 'lucide-react';
+import { AntecedentsSelectorModal } from './AntecedentsSelectorModal';
+import {
+  TOP_HEREDOFAMILIARES_QUICK_FILL,
+  TOP_PERSONALES_PATOLOGICOS_QUICK_FILL
+} from '../data/antecedentsCatalog';
 
 interface Module1IdentificationProps {
   data: IdentificationData;
@@ -16,6 +21,8 @@ export const Module1Identification: React.FC<Module1IdentificationProps> = ({
   onChange,
   savedRecords
 }) => {
+  const [selectorTarget, setSelectorTarget] = useState<'heredofamiliares' | 'patologicos' | null>(null);
+
   const updateField = (field: keyof IdentificationData, value: string) => {
     onChange({
       ...data,
@@ -252,7 +259,7 @@ export const Module1Identification: React.FC<Module1IdentificationProps> = ({
 
       {/* Section 4: Antecedentes Clínicos */}
       <div className="p-5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-sky-700 dark:text-sky-400">
             <FileText className="w-4 h-4" />
             <span>Antecedentes Clínicos (NOM-004)</span>
@@ -260,22 +267,62 @@ export const Module1Identification: React.FC<Module1IdentificationProps> = ({
           <span className="text-[11px] text-slate-400">Prohibido dejar en blanco</span>
         </div>
 
-        <div className="space-y-3.5">
-          <FieldWithCopy
-            label="Antecedentes Heredofamiliares"
-            value={data.antecedentesHeredofamiliares}
-            onChange={(v) => updateField('antecedentesHeredofamiliares', v)}
-            placeholder="Detalle o 'Interrogados y negados'"
-            quickFillOptions={['Interrogados y negados', 'Padre con DM2 e HAS', 'Madre con HAS', 'Sin antecedentes de importancia']}
-          />
+        <div className="space-y-4">
+          {/* Heredofamiliares */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                <Dna className="w-3.5 h-3.5 text-purple-600" />
+                <span>Antecedentes Heredofamiliares (AHF)</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectorTarget('heredofamiliares')}
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/50 dark:text-purple-300 dark:hover:bg-purple-900/50 border border-purple-200 dark:border-purple-800 rounded-lg transition-all shadow-sm"
+                title="Abrir catálogo clasificado con Cáncer, Cardiopatías, Renal, Asma y selector múltiple"
+              >
+                <Sparkles className="w-3 h-3" />
+                <span>🧬 Catálogo Extendido & Selector</span>
+              </button>
+            </div>
+            <FieldWithCopy
+              label=""
+              value={data.antecedentesHeredofamiliares}
+              onChange={(v) => updateField('antecedentesHeredofamiliares', v)}
+              type="textarea"
+              rows={2}
+              placeholder="Detalle o 'Interrogados y negados' (Ej. Padre con DM2 e HAS, Madre con Cáncer de Mama, Abuelo con Cardiopatía)"
+              quickFillOptions={TOP_HEREDOFAMILIARES_QUICK_FILL}
+            />
+          </div>
 
-          <FieldWithCopy
-            label="Antecedentes Personales Patológicos"
-            value={data.antecedentesPersonalesPatologicos}
-            onChange={(v) => updateField('antecedentesPersonalesPatologicos', v)}
-            placeholder="Detalle o 'Interrogados y negados'"
-            quickFillOptions={['Interrogados y negados', 'Hipertensión arterial en control', 'Diabetes mellitus tipo 2 en control', 'Apendicectomía hace 5 años']}
-          />
+          {/* Personales Patológicos */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                <HeartPulse className="w-3.5 h-3.5 text-teal-600" />
+                <span>Antecedentes Personales Patológicos (APP)</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectorTarget('patologicos')}
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/50 dark:text-teal-300 dark:hover:bg-teal-900/50 border border-teal-200 dark:border-teal-800 rounded-lg transition-all shadow-sm"
+                title="Abrir catálogo clasificado con Crónicos, Quirúrgicos, Cirugías, Alergias, Transfusiones y selector múltiple"
+              >
+                <Sparkles className="w-3 h-3" />
+                <span>🩺 Catálogo Extendido & Selector</span>
+              </button>
+            </div>
+            <FieldWithCopy
+              label=""
+              value={data.antecedentesPersonalesPatologicos}
+              onChange={(v) => updateField('antecedentesPersonalesPatologicos', v)}
+              type="textarea"
+              rows={2}
+              placeholder="Detalle o 'Interrogados y negados' (Ej. Hipertensión en control, Apendicectomía hace 5 años, Alergia a Penicilina)"
+              quickFillOptions={TOP_PERSONALES_PATOLOGICOS_QUICK_FILL}
+            />
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5">
             <FieldWithCopy
@@ -315,6 +362,27 @@ export const Module1Identification: React.FC<Module1IdentificationProps> = ({
           />
         </div>
       </div>
+
+      {/* Modal de Catálogo Extendido de Antecedentes */}
+      {selectorTarget && (
+        <AntecedentsSelectorModal
+          isOpen={selectorTarget !== null}
+          onClose={() => setSelectorTarget(null)}
+          target={selectorTarget}
+          currentValue={
+            selectorTarget === 'heredofamiliares'
+              ? data.antecedentesHeredofamiliares
+              : data.antecedentesPersonalesPatologicos
+          }
+          onApply={(updatedText) => {
+            if (selectorTarget === 'heredofamiliares') {
+              updateField('antecedentesHeredofamiliares', updatedText);
+            } else {
+              updateField('antecedentesPersonalesPatologicos', updatedText);
+            }
+          }}
+        />
+      )}
     </div>
   );
 };

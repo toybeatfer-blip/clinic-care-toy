@@ -202,6 +202,23 @@ export function parseRawMedicalNote(rawText: string, existingRecord?: ClinicalRe
     parsedInterp = 'Estudios aportados por el paciente se correlacionan clínicamente con el diagnóstico y evolución del cuadro actual.';
   }
 
+  // 9. Detectar Antecedentes Heredofamiliares o Patológicos en dictado libre
+  let parsedAHF = existingRecord?.identification.antecedentesHeredofamiliares || '';
+  const ahfMatch = text.match(/(?:ahf|antecedentes\s+familiares|heredofamiliares|heredofamiliar)[\s:]*([^\n;]+)/i);
+  if (ahfMatch) {
+    parsedAHF = ahfMatch[1].trim();
+  } else if (!parsedAHF) {
+    parsedAHF = 'Interrogados y negados';
+  }
+
+  let parsedAPP = existingRecord?.identification.antecedentesPersonalesPatologicos || '';
+  const appMatch = text.match(/(?:app|antecedentes\s+patol[oó]gicos|patol[oó]gicos|antecedentes\s+personales)[\s:]*([^\n;]+)/i);
+  if (appMatch) {
+    parsedAPP = appMatch[1].trim();
+  } else if (!parsedAPP) {
+    parsedAPP = 'Interrogados y negados';
+  }
+
   return {
     identification: {
       nombres: detectedName || existingRecord?.identification.nombres || '',
@@ -224,8 +241,8 @@ export function parseRawMedicalNote(rawText: string, existingRecord?: ClinicalRe
       numeroInt: existingRecord?.identification.numeroInt || 'Sin Número',
       telefonoCelular: existingRecord?.identification.telefonoCelular || '',
       correoElectronico: existingRecord?.identification.correoElectronico || '',
-      antecedentesHeredofamiliares: existingRecord?.identification.antecedentesHeredofamiliares || 'Interrogados y negados',
-      antecedentesPersonalesPatologicos: existingRecord?.identification.antecedentesPersonalesPatologicos || 'Interrogados y negados',
+      antecedentesHeredofamiliares: parsedAHF,
+      antecedentesPersonalesPatologicos: parsedAPP,
       farmacodependencias: existingRecord?.identification.farmacodependencias || 'Negadas',
       tabaquismo: existingRecord?.identification.tabaquismo || 'Negado',
       alcoholismo: existingRecord?.identification.alcoholismo || 'Negado',
