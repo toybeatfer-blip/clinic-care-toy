@@ -26,6 +26,7 @@ import { OperationalGuideModal } from './components/OperationalGuideModal';
 import { RawDataParserModal } from './components/RawDataParserModal';
 import { SavedRecordsDrawer } from './components/SavedRecordsDrawer';
 import { PrintableNoteModal } from './components/PrintableNoteModal';
+import { PrintablePrescriptionModal } from './components/PrintablePrescriptionModal';
 import { SettingsModal } from './components/SettingsModal';
 import { SpecialistToolsModal } from './components/SpecialistToolsModal';
 import { PatientTimelineModal } from './components/PatientTimelineModal';
@@ -41,7 +42,9 @@ import {
   Settings,
   LogOut,
   Calculator,
-  History
+  History,
+  FileText,
+  Pill
 } from 'lucide-react';
 import { CopyButton } from './components/CopyButton';
 import { generateModule1Text, generateModule2Text, generateModule3Text, generateModule4Text } from './utils/nom004Validator';
@@ -79,6 +82,7 @@ export const App: React.FC = () => {
   const [isPatientTimelineOpen, setIsPatientTimelineOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [isPrescriptionModalOpen, setIsPrescriptionModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [lastSavedTime, setLastSavedTime] = useState<string>('Guardado automáticamente');
@@ -194,6 +198,8 @@ export const App: React.FC = () => {
         onOpenPatientTimeline={() => setIsPatientTimelineOpen(true)}
         onOpenSavedDrawer={() => setIsDrawerOpen(true)}
         onOpenPrintPreview={() => setIsPrintModalOpen(true)}
+        onOpenPrintNote={() => setIsPrintModalOpen(true)}
+        onOpenPrescription={() => setIsPrescriptionModalOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onNewPatient={handleNewPatient}
         onLogout={handleLogout}
@@ -307,6 +313,8 @@ export const App: React.FC = () => {
               patientInfo={record.identification}
               doctorSettings={doctorSettings}
               clinicId={clinicId}
+              onOpenPrintNote={() => setIsPrintModalOpen(true)}
+              onOpenPrescription={() => setIsPrescriptionModalOpen(true)}
             />
           )}
 
@@ -320,6 +328,8 @@ export const App: React.FC = () => {
               onAppointmentChange={(apt) => setRecord({ ...record, appointmentInfo: apt })}
               patientInfo={record.identification}
               doctorSettings={doctorSettings}
+              onOpenPrintNote={() => setIsPrintModalOpen(true)}
+              onOpenPrescription={() => setIsPrescriptionModalOpen(true)}
             />
           )}
 
@@ -343,6 +353,26 @@ export const App: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3 text-[11px]">
+            <button
+              type="button"
+              onClick={() => setIsPrintModalOpen(true)}
+              className="hover:text-sky-600 transition-colors flex items-center gap-1 font-semibold"
+              title="Ver e imprimir nota médica oficial completa"
+            >
+              <FileText className="w-3.5 h-3.5 text-sky-600" />
+              <span>Nota Médica</span>
+            </button>
+            <span>•</span>
+            <button
+              type="button"
+              onClick={() => setIsPrescriptionModalOpen(true)}
+              className="hover:text-teal-600 transition-colors flex items-center gap-1 font-semibold"
+              title="Ver e imprimir receta médica oficial para el paciente"
+            >
+              <Pill className="w-3.5 h-3.5 text-teal-600" />
+              <span>Receta Médica</span>
+            </button>
+            <span>•</span>
             <button
               type="button"
               onClick={() => setIsSpecialistToolsOpen(true)}
@@ -467,6 +497,13 @@ export const App: React.FC = () => {
       <PrintableNoteModal
         isOpen={isPrintModalOpen}
         onClose={() => setIsPrintModalOpen(false)}
+        record={record}
+        doctorSettings={doctorSettings}
+      />
+
+      <PrintablePrescriptionModal
+        isOpen={isPrescriptionModalOpen}
+        onClose={() => setIsPrescriptionModalOpen(false)}
         record={record}
         doctorSettings={doctorSettings}
       />

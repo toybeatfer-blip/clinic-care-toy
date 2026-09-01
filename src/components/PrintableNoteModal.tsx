@@ -284,23 +284,33 @@ export const PrintableNoteModal: React.FC<PrintableNoteModalProps> = ({
             )}
           </div>
 
-          {/* Signature lines with Doctor's professional details */}
-          <div className="pt-12 grid grid-cols-2 gap-8 text-center text-xs border-t border-slate-300">
-            <div>
-              <div className="border-t border-slate-400 w-56 mx-auto pt-1 font-bold">
-                {doctorSettings.prefix} {doctorSettings.doctorName}
+          {/* Signature lines with Doctor's professional details and Stamp Area */}
+          <div className="pt-8 grid grid-cols-1 sm:grid-cols-2 gap-8 text-center text-xs border-t border-slate-300">
+            <div className="flex flex-col items-center justify-center">
+              <div className="border border-dashed border-slate-300 rounded w-48 h-16 mb-2 flex items-center justify-center text-[9px] text-slate-400 uppercase tracking-wider bg-slate-50/50">
+                [ Espacio para Sello y Firma ]
+              </div>
+              <div className="border-t border-slate-800 w-56 mx-auto pt-1 font-bold text-slate-900">
+                {doctorSettings.prefix} {doctorSettings.doctorName || 'Médico Tratante'}
               </div>
               <span className="text-[10px] text-slate-600 block">
-                Cédula Profesional: {doctorSettings.cedulaGeneral}
+                Cédula Profesional: <strong>{doctorSettings.cedulaGeneral || 'N/E'}</strong>
               </span>
               {doctorSettings.cedulaEspecialidad && (
                 <span className="text-[10px] text-slate-500 block">
-                  Céd. Esp: {doctorSettings.cedulaEspecialidad}
+                  Céd. Especialidad: <strong>{doctorSettings.cedulaEspecialidad}</strong>
                 </span>
               )}
+              <span className="text-[9px] text-slate-400 block mt-0.5">
+                Médico Tratante Responsable (NOM-004-SSA3-2012)
+              </span>
             </div>
-            <div>
-              <div className="border-t border-slate-400 w-56 mx-auto pt-1 font-bold">
+
+            <div className="flex flex-col items-center justify-end">
+              <div className="h-16 flex items-center justify-center text-[9px] text-slate-400 italic">
+                Acepto valoración e indicaciones
+              </div>
+              <div className="border-t border-slate-800 w-56 mx-auto pt-1 font-bold text-slate-900">
                 Firma del Paciente / Tutor
               </div>
               <span className="text-[10px] text-slate-500 block">

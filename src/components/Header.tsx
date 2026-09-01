@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Stethoscope, Clock, BookOpen, Sparkles, FolderOpen, UserPlus, Printer, Settings, Ticket, LogOut, ShieldCheck, Building2, Calendar, Calculator, History } from 'lucide-react';
+import { Stethoscope, Clock, BookOpen, Sparkles, FolderOpen, UserPlus, Printer, Settings, Ticket, LogOut, ShieldCheck, Building2, Calendar, Calculator, History, FileText, Pill } from 'lucide-react';
 import { CopyButton } from './CopyButton';
 import { DoctorSettings, SessionUser } from '../types';
 import { getDaysRemaining } from '../utils/authStorage';
@@ -12,7 +12,9 @@ interface HeaderProps {
   onOpenSpecialistTools: () => void;
   onOpenPatientTimeline: () => void;
   onOpenSavedDrawer: () => void;
-  onOpenPrintPreview: () => void;
+  onOpenPrintPreview?: () => void;
+  onOpenPrintNote?: () => void;
+  onOpenPrescription?: () => void;
   onOpenSettings: () => void;
   onNewPatient: () => void;
   onLogout: () => void;
@@ -29,6 +31,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenPatientTimeline,
   onOpenSavedDrawer,
   onOpenPrintPreview,
+  onOpenPrintNote,
+  onOpenPrescription,
   onOpenSettings,
   onNewPatient,
   onLogout,
@@ -156,14 +160,26 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="hidden md:inline">Manual SAC</span>
             </button>
 
+            {/* Botón Nota Médica */}
             <button
               type="button"
-              onClick={onOpenPrintPreview}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors"
-              title="Ver nota médica y receta para impresión"
+              onClick={onOpenPrintNote || onOpenPrintPreview}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 text-xs font-bold hover:bg-sky-100 transition-colors shadow-sm"
+              title="Ver expediente clínico y nota médica completa oficial conforme a NOM-004 para impresión"
             >
-              <Printer className="w-3.5 h-3.5 text-slate-600" />
-              <span className="hidden md:inline">Imprimir</span>
+              <FileText className="w-3.5 h-3.5 text-sky-600" />
+              <span>Nota Médica</span>
+            </button>
+
+            {/* Botón Receta Médica Expedible */}
+            <button
+              type="button"
+              onClick={onOpenPrescription || onOpenPrintPreview}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 text-xs font-bold hover:bg-teal-100 transition-colors shadow-sm"
+              title="Generar e imprimir receta médica expedible oficial con datos del médico lista para sello y firma"
+            >
+              <Pill className="w-3.5 h-3.5 text-teal-600" />
+              <span>Receta Médica</span>
             </button>
 
             <button

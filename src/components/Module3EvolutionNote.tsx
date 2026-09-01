@@ -5,7 +5,7 @@ import { CopyButton } from './CopyButton';
 import { generateModule3Text, calculateIMC, formatTallaInput } from '../utils/nom004Validator';
 import { DiagnosticStudiesCard } from './DiagnosticStudiesCard';
 import { AppointmentSchedulerCard } from './AppointmentSchedulerCard';
-import { ClipboardList, Activity } from 'lucide-react';
+import { ClipboardList, Activity, FileText, Pill } from 'lucide-react';
 
 interface Module3EvolutionNoteProps {
   data: EvolutionNoteData;
@@ -16,6 +16,8 @@ interface Module3EvolutionNoteProps {
   onAppointmentChange?: (apt: AppointmentInfo) => void;
   patientInfo?: IdentificationData;
   doctorSettings?: DoctorSettings;
+  onOpenPrintNote?: () => void;
+  onOpenPrescription?: () => void;
 }
 
 export const Module3EvolutionNote: React.FC<Module3EvolutionNoteProps> = ({
@@ -26,7 +28,9 @@ export const Module3EvolutionNote: React.FC<Module3EvolutionNoteProps> = ({
   appointmentInfo,
   onAppointmentChange,
   patientInfo = {} as IdentificationData,
-  doctorSettings
+  doctorSettings,
+  onOpenPrintNote,
+  onOpenPrescription
 }) => {
   const updateField = <K extends keyof EvolutionNoteData>(field: K, value: EvolutionNoteData[K]) => {
     onChange({
@@ -67,12 +71,38 @@ export const Module3EvolutionNote: React.FC<Module3EvolutionNoteProps> = ({
           </div>
         </div>
 
-        <CopyButton
-          text={fullText}
-          label="Copiar Nota de Evolución Completa"
-          variant="primary"
-          size="md"
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          {onOpenPrintNote && (
+            <button
+              type="button"
+              onClick={onOpenPrintNote}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 text-xs font-bold hover:bg-sky-100 transition-colors shadow-sm"
+              title="Ver e imprimir nota médica oficial"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>Ver Nota Médica</span>
+            </button>
+          )}
+
+          {onOpenPrescription && (
+            <button
+              type="button"
+              onClick={onOpenPrescription}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 text-xs font-bold hover:bg-teal-100 transition-colors shadow-sm"
+              title="Ver e imprimir receta médica oficial para el paciente"
+            >
+              <Pill className="w-3.5 h-3.5" />
+              <span>Expedir Receta</span>
+            </button>
+          )}
+
+          <CopyButton
+            text={fullText}
+            label="Copiar Nota Completa"
+            variant="primary"
+            size="md"
+          />
+        </div>
       </div>
 
       {/* Main Content Form */}

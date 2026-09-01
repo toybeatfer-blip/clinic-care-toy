@@ -17,7 +17,9 @@ import {
   Plus,
   Trash2,
   ShieldCheck,
-  Package
+  Package,
+  Printer,
+  FileText
 } from 'lucide-react';
 
 interface Module2HistoryCheckupProps {
@@ -30,6 +32,8 @@ interface Module2HistoryCheckupProps {
   patientInfo?: IdentificationData;
   doctorSettings?: DoctorSettings;
   clinicId?: string;
+  onOpenPrintNote?: () => void;
+  onOpenPrescription?: () => void;
 }
 
 export const Module2HistoryCheckup: React.FC<Module2HistoryCheckupProps> = ({
@@ -41,7 +45,9 @@ export const Module2HistoryCheckup: React.FC<Module2HistoryCheckupProps> = ({
   onAppointmentChange,
   patientInfo = {} as IdentificationData,
   doctorSettings,
-  clinicId
+  clinicId,
+  onOpenPrintNote,
+  onOpenPrescription
 }) => {
   const [showKitsModal, setShowKitsModal] = useState<boolean>(false);
   const [cieSearch, setCieSearch] = useState('');
@@ -150,12 +156,38 @@ export const Module2HistoryCheckup: React.FC<Module2HistoryCheckupProps> = ({
           </div>
         </div>
 
-        <CopyButton
-          text={fullModuleText}
-          label="Copiar Nota Completa (Módulo 2)"
-          variant="primary"
-          size="md"
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          {onOpenPrintNote && (
+            <button
+              type="button"
+              onClick={onOpenPrintNote}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 text-xs font-bold hover:bg-sky-100 transition-colors shadow-sm"
+              title="Ver e imprimir nota médica oficial completa"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>Ver Nota Médica</span>
+            </button>
+          )}
+
+          {onOpenPrescription && (
+            <button
+              type="button"
+              onClick={onOpenPrescription}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 text-xs font-bold hover:bg-teal-100 transition-colors shadow-sm"
+              title="Ver e imprimir receta médica oficial para el paciente"
+            >
+              <Pill className="w-3.5 h-3.5" />
+              <span>Expedir Receta</span>
+            </button>
+          )}
+
+          <CopyButton
+            text={fullModuleText}
+            label="Copiar Nota Completa"
+            variant="primary"
+            size="md"
+          />
+        </div>
       </div>
 
       {/* Prescription Kits Modal */}
@@ -527,7 +559,19 @@ export const Module2HistoryCheckup: React.FC<Module2HistoryCheckupProps> = ({
             <p className="text-[11px] text-slate-500">Prescripción clara y normada conforme a NOM-004</p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {onOpenPrescription && (
+              <button
+                type="button"
+                onClick={onOpenPrescription}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-sm"
+                title="Generar e imprimir receta médica oficial lista para sello y firma del médico tratante"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>Expedir Receta</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={() => setShowKitsModal(true)}
