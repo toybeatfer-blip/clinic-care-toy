@@ -34,6 +34,8 @@ import {
   renewClinicLicense,
   getDaysRemaining,
   getAdminContactInfo,
+  exportMasterDatabaseBackupJSON,
+  importMasterDatabaseBackupJSON,
   CLINICS_UPDATED_EVENT,
   ADMIN_CONTACT_EVENT
 } from '../utils/authStorage';
@@ -166,25 +168,16 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
   };
 
   const handleExportMasterBackup = () => {
-    const all = getAllClinics();
-    const masterData = {
-      exportedAt: new Date().toISOString(),
-      superAdmin: 'Fernando01',
-      adminContact,
-      totalClinics: all.length,
-      clinics: all.map(c => ({
-        ...c,
-        patients: getClinicRecords(c.id)
-      }))
-    };
-
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(masterData, null, 2));
+    const jsonStr = exportMasterDatabaseBackupJSON();
+    const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
     const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `master_respaldo_consultorios_${new Date().toISOString().slice(0,10)}.json`);
+    downloadAnchor.setAttribute('href', url);
+    downloadAnchor.setAttribute('download', `RESPALDO_BLINDADO_CLINIC_CARE_TOY_${new Date().toISOString().slice(0, 10)}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
+    URL.revokeObjectURL(url);
   };
 
   const handleImportBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -195,32 +188,15 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
     reader.onload = (event) => {
       try {
         const content = event.target?.result as string;
-        const parsed = JSON.parse(content);
-        
-        let importedList: ClinicAccount[] = [];
-        if (Array.isArray(parsed)) {
-          importedList = parsed;
-        } else if (parsed && Array.isArray(parsed.clinics)) {
-          importedList = parsed.clinics;
+        const res = importMasterDatabaseBackupJSON(content);
+        if (res.success) {
+          refreshClinics();
+          alert(`✅ Respaldo restaurado y blindado con éxito:\n\nSe sincronizaron ${res.importedCount} consultorios y sus historiales.`);
+        } else {
+          alert(`❌ Error al importar respaldo: ${res.error}`);
         }
-
-        if (importedList.length === 0) {
-          alert('El archivo no contiene consultorios válidos.');
-          return;
-        }
-
-        // Fusionar consultorios preservando los existentes
-        const current = getAllClinics();
-        const mergedMap = new Map<string, ClinicAccount>();
-        current.forEach(c => mergedMap.set(c.id, c));
-        importedList.forEach(c => mergedMap.set(c.id, c));
-
-        const finalList = Array.from(mergedMap.values());
-        saveAllClinics(finalList);
-        setClinics(finalList);
-        alert(`¡Respaldo importado con éxito! Se sincronizaron ${finalList.length} consultorios.`);
-      } catch (err) {
-        alert('Error al leer el archivo JSON de respaldo.');
+      } catch (err: any) {
+        alert(`❌ Error al leer el archivo de respaldo: ${err.message}`);
       }
     };
     reader.readAsText(file);

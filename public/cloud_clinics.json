@@ -1,13 +1,36 @@
 {
-    "updatedAt":  "2026-08-25T22:59:03.6403206-06:00",
-    "adminContact":  {
-                         "phoneWhatsApp":  "55 1234 5678",
-                         "adminName":  "Fernando (Super Administrador)",
-                         "email":  "toybeatfer@gmail.com",
-                         "helpMessage":  "Para renovar tu licencia mensual o resolver dudas sobre tu cuenta de consultorio, comun�cate directamente con el administrador del sistema."
-                     },
-    "clinics":  [
-
-                ],
-    "superAdmin":  "Fernando01"
+  "superAdmin": "Fernando01",
+  "updatedAt": "2026-09-01T12:46:00.000Z",
+  "adminContact": {
+    "adminName": "Fernando (Super Administrador)",
+    "phoneWhatsApp": "55 1234 5678",
+    "email": "toybeatfer@gmail.com",
+    "helpMessage": "Para renovar tu licencia mensual o resolver dudas sobre tu cuenta de consultorio, comunÃ­cate directamente con el administrador del sistema.",
+    "updatedAt": "2026-09-01T12:46:00.000Z"
+  },
+  "clinics": [
+    {
+      "id": "clinic_seed_central_01",
+      "clinicName": "ClÃ­nica MÃ©dica Familiar y Especialidades",
+      "username": "consultorio1",
+      "passwordPlain": "1234",
+      "doctorName": "Fernando BeltrÃ¡n",
+      "prefix": "Dr.",
+      "cedulaGeneral": "12345678",
+      "cedulaEspecialidad": "ESP-987654",
+      "especialidad": "Medicina General y Familiar",
+      "universidad": "UNAM / Facultad de Medicina",
+      "telefono": "55 1234 5678",
+      "correo": "toybeatfer@gmail.com",
+      "direccion": "Av. Insurgentes Sur 1234, Ciudad de MÃ©xico",
+      "sucursal": "Matriz Principal",
+      "logoUrl": "",
+      "primaryColor": "sky",
+      "createdAt": "2026-01-01T00:00:00.000Z",
+      "updatedAt": "2026-09-01T12:46:00.000Z",
+      "lastLoginAt": "2026-09-01T12:46:00.000Z",
+      "licenseStatus": "active",
+      "licenseValidUntil": "Indefinida"
+    }
+  ]
 }

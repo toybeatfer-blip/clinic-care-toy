@@ -1,16 +1,60 @@
 import { ClinicAccount, SessionUser, ClinicalRecord, DoctorSettings, LicenseStatus, AdminContactInfo } from '../types';
-import { pushClinicsToCloud, pullClinicsFromCloud } from './cloudStorage';
+import { pushClinicsToCloud } from './cloudStorage';
+import {
+  idbSaveClinics,
+  idbGetClinics,
+  idbSaveClinicRecords,
+  idbGetClinicRecords,
+  idbSaveClinicSettings,
+  idbGetClinicSettings,
+  idbSaveSnapshot,
+  requestPersistentStorage
+} from './indexedDBStorage';
+
+// Activar persistencia protegida del navegador al iniciar
+if (typeof window !== 'undefined') {
+  requestPersistentStorage().catch(() => {});
+}
 
 export const SUPERADMIN_USER = 'Fernando01';
 export const SUPERADMIN_PASS = 'Bazzoka1313AS.';
 
+// Claves de Blindaje Maestro Multi-Capa
 const MASTER_CLINICS_KEY = 'clinic_care_clinics_master_v2';
+const VAULT_BACKUP_KEY = 'clinic_care_vault_master_backup_v2';
 const SESSION_KEY = 'clinic_care_session_v2';
 const ADMIN_CONTACT_KEY = 'clinic_care_admin_contact_v2';
 const DELETED_CLINICS_KEY = 'clinic_care_deleted_ids_v2';
 
 export const ADMIN_CONTACT_EVENT = 'clinic_care_admin_contact_updated_v2';
 export const CLINICS_UPDATED_EVENT = 'clinic_care_clinics_updated_v2';
+
+// Semilla de consultorios pre-configurados para evitar que la aplicación quede vacía
+export const SEED_DEFAULT_CLINICS: ClinicAccount[] = [
+  {
+    id: 'clinic_seed_central_01',
+    clinicName: 'Clínica Médica Familiar y Especialidades',
+    username: 'consultorio1',
+    passwordPlain: '1234',
+    doctorName: 'Fernando Beltrán',
+    prefix: 'Dr.',
+    cedulaGeneral: '12345678',
+    cedulaEspecialidad: 'ESP-987654',
+    especialidad: 'Medicina General y Familiar',
+    universidad: 'UNAM / Facultad de Medicina',
+    telefono: '55 1234 5678',
+    correo: 'toybeatfer@gmail.com',
+    direccion: 'Av. Insurgentes Sur 1234, Ciudad de México',
+    sucursal: 'Matriz Principal',
+    logoUrl: '',
+    primaryColor: 'sky',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    lastLoginAt: '2026-01-01T00:00:00.000Z',
+    licenseStatus: 'active',
+    licenseValidUntil: 'Indefinida'
+  }
+];
 
 export function generateUUID(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -155,13 +199,13 @@ export function clearSession(): void {
   }
 }
 
-// 4. REGISTRO MAESTRO DE CONSULTORIOS
+// 4. REGISTRO MAESTRO DE CONSULTORIOS CON BLINDAJE MULTI-CAPA
 export function getAllClinics(): ClinicAccount[] {
   try {
     const deletedIds = getDeletedClinicIds();
     const clinicsMap = new Map<string, ClinicAccount>();
 
-    // 1. Cargar del registro principal actual v2
+    // Capa 1: Cargar de la Clave Principal Actual v2
     const raw = localStorage.getItem(MASTER_CLINICS_KEY);
     if (raw) {
       try {
@@ -176,7 +220,22 @@ export function getAllClinics(): ClinicAccount[] {
       } catch (e) {}
     }
 
-    // 2. Cargar de claves históricas maestras (v1, v0)
+    // Capa 2: Cargar de la Bóveda de Respaldo Local (Vault Mirror)
+    const rawVault = localStorage.getItem(VAULT_BACKUP_KEY);
+    if (rawVault) {
+      try {
+        const parsedVault = JSON.parse(rawVault);
+        if (Array.isArray(parsedVault)) {
+          parsedVault.forEach((c: any) => {
+            if (c && c.id && !deletedIds.has(c.id) && !clinicsMap.has(c.id)) {
+              clinicsMap.set(c.id, c);
+            }
+          });
+        }
+      } catch (e) {}
+    }
+
+    // Capa 3: Cargar de Claves Históricas (v1, v0, etc.)
     const legacyKeys = ['clinic_care_clinics_master_v1', 'clinic_care_clinics_master', 'clinics_master_v1'];
     legacyKeys.forEach(k => {
       const leg = localStorage.getItem(k);
@@ -194,7 +253,7 @@ export function getAllClinics(): ClinicAccount[] {
       }
     });
 
-    // 3. Escanear configuraciones de consultorios individuales en localStorage
+    // Capa 4: Escanear todas las configuraciones de consultorio individuales en localStorage
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (!key) continue;
@@ -239,6 +298,20 @@ export function getAllClinics(): ClinicAccount[] {
       }
     }
 
+    // Capa 5: Si está completamente vacío, inicializar con las clínicas semilla por defecto
+    if (clinicsMap.size === 0) {
+      SEED_DEFAULT_CLINICS.forEach(seed => {
+        if (!deletedIds.has(seed.id)) {
+          clinicsMap.set(seed.id, seed);
+          initClinicDatabase(seed);
+        }
+      });
+      const initialList = Array.from(clinicsMap.values());
+      localStorage.setItem(MASTER_CLINICS_KEY, JSON.stringify(initialList));
+      localStorage.setItem(VAULT_BACKUP_KEY, JSON.stringify(initialList));
+      idbSaveClinics(initialList).catch(() => {});
+    }
+
     const list = Array.from(clinicsMap.values());
     
     return list.map((c: any) => {
@@ -270,7 +343,7 @@ export function getAllClinics(): ClinicAccount[] {
     });
   } catch (e) {
     console.error('Error loading clinics', e);
-    return [];
+    return SEED_DEFAULT_CLINICS;
   }
 }
 
@@ -278,10 +351,39 @@ export function saveAllClinics(clinics: ClinicAccount[], syncToCloud: boolean = 
   try {
     const deletedIds = getDeletedClinicIds();
     const cleanList = clinics.filter(c => !deletedIds.has(c.id));
+    
+    // Guardar en almacenamiento principal y en bóveda redundante
     localStorage.setItem(MASTER_CLINICS_KEY, JSON.stringify(cleanList));
+    localStorage.setItem(VAULT_BACKUP_KEY, JSON.stringify(cleanList));
+    
+    // Guardar en IndexedDB
+    idbSaveClinics(cleanList).catch(() => {});
+
+    // Crear snapshot de respaldo rotativo
+    try {
+      const snapshotKey = `clinic_care_snapshot_${Date.now()}`;
+      localStorage.setItem(snapshotKey, JSON.stringify(cleanList));
+      // Mantener máximo 5 snapshots para no saturar memoria
+      const allSnapshotKeys: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('clinic_care_snapshot_')) {
+          allSnapshotKeys.push(k);
+        }
+      }
+      if (allSnapshotKeys.length > 5) {
+        allSnapshotKeys.sort();
+        while (allSnapshotKeys.length > 5) {
+          const oldKey = allSnapshotKeys.shift();
+          if (oldKey) localStorage.removeItem(oldKey);
+        }
+      }
+    } catch (e) {}
+
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent(CLINICS_UPDATED_EVENT, { detail: cleanList }));
     }
+
     if (syncToCloud) {
       setTimeout(() => pushClinicsToCloud(cleanList).catch(() => {}), 50);
     }
@@ -368,6 +470,7 @@ export function deleteClinic(clinicId: string): ClinicAccount[] {
     localStorage.removeItem(`clinic_care_records_clinic_${clinicId}_v2`);
     localStorage.removeItem(`clinic_care_settings_clinic_${clinicId}_v2`);
     localStorage.removeItem(`clinic_care_active_record_clinic_${clinicId}_v2`);
+    localStorage.removeItem(`clinic_care_backup_records_${clinicId}_v2`);
   } catch (e) {
     console.error('Error deleting clinic DB', e);
   }
@@ -426,7 +529,7 @@ export function authenticateUser(usernameInput: string, passwordInput: string): 
   const found = clinics.find(c => (c.username || '').toLowerCase() === user.toLowerCase());
 
   if (!found) {
-    return { success: false, error: 'Usuario no encontrado. Verifica el usuario o regístrate.' };
+    return { success: false, error: 'Usuario no encontrado. Verifica tus credenciales o contacta al Super Administrador.' };
   }
 
   if (found.passwordPlain !== pass) {
@@ -642,9 +745,13 @@ export function deepMergeBlank(rawRecord: any): ClinicalRecord {
 export function initClinicDatabase(clinic: ClinicAccount): void {
   const recordsKey = `clinic_care_records_clinic_${clinic.id}_v2`;
   const settingsKey = `clinic_care_settings_clinic_${clinic.id}_v2`;
+  const backupKey = `clinic_care_backup_records_${clinic.id}_v2`;
 
   if (!localStorage.getItem(recordsKey)) {
     localStorage.setItem(recordsKey, JSON.stringify([]));
+  }
+  if (!localStorage.getItem(backupKey)) {
+    localStorage.setItem(backupKey, JSON.stringify([]));
   }
 
   const doctorSettings: DoctorSettings = {
@@ -665,12 +772,16 @@ export function initClinicDatabase(clinic: ClinicAccount): void {
   };
 
   localStorage.setItem(settingsKey, JSON.stringify(doctorSettings));
+  idbSaveClinicSettings(clinic.id, doctorSettings).catch(() => {});
 }
 
-// 7. OPERACIONES DE BASE DE DATOS DEL CONSULTORIO ACTIVO
+// 7. OPERACIONES DE BASE DE DATOS DEL CONSULTORIO ACTIVO (CON BLINDAJE REDUNDANTE)
 export function getClinicRecords(clinicId: string): ClinicalRecord[] {
   try {
-    const raw = localStorage.getItem(`clinic_care_records_clinic_${clinicId}_v2`);
+    let raw = localStorage.getItem(`clinic_care_records_clinic_${clinicId}_v2`);
+    if (!raw) {
+      raw = localStorage.getItem(`clinic_care_backup_records_${clinicId}_v2`) || localStorage.getItem(`clinic_care_records_clinic_${clinicId}`);
+    }
     if (!raw) return [];
     const list = JSON.parse(raw);
     if (!Array.isArray(list)) return [];
@@ -697,7 +808,12 @@ export function saveClinicRecord(clinicId: string, record: ClinicalRecord): Clin
     }
 
     localStorage.setItem(`clinic_care_records_clinic_${clinicId}_v2`, JSON.stringify(nextList));
+    localStorage.setItem(`clinic_care_backup_records_${clinicId}_v2`, JSON.stringify(nextList));
     localStorage.setItem(`clinic_care_active_record_clinic_${clinicId}_v2`, JSON.stringify(updated));
+
+    // Guardar en IndexedDB en segundo plano
+    idbSaveClinicRecords(clinicId, nextList).catch(() => {});
+
     return nextList;
   } catch (e) {
     console.error('Error saving clinic record', e);
@@ -710,6 +826,8 @@ export function deleteClinicRecord(clinicId: string, recordId: string): Clinical
     const records = getClinicRecords(clinicId);
     const filtered = records.filter(r => r.id !== recordId);
     localStorage.setItem(`clinic_care_records_clinic_${clinicId}_v2`, JSON.stringify(filtered));
+    localStorage.setItem(`clinic_care_backup_records_${clinicId}_v2`, JSON.stringify(filtered));
+    idbSaveClinicRecords(clinicId, filtered).catch(() => {});
     return filtered;
   } catch (e) {
     console.error('Error deleting record', e);
@@ -719,7 +837,7 @@ export function deleteClinicRecord(clinicId: string, recordId: string): Clinical
 
 export function getClinicSettings(clinicId: string): DoctorSettings {
   try {
-    const raw = localStorage.getItem(`clinic_care_settings_clinic_${clinicId}_v2`);
+    const raw = localStorage.getItem(`clinic_care_settings_clinic_${clinicId}_v2`) || localStorage.getItem(`clinic_care_settings_clinic_${clinicId}`);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === 'object') {
@@ -765,6 +883,7 @@ export function getClinicSettings(clinicId: string): DoctorSettings {
 export function saveClinicSettings(clinicId: string, settings: DoctorSettings): void {
   try {
     localStorage.setItem(`clinic_care_settings_clinic_${clinicId}_v2`, JSON.stringify(settings));
+    idbSaveClinicSettings(clinicId, settings).catch(() => {});
     updateClinic(clinicId, {
       clinicName: settings.nombreClinica,
       doctorName: settings.doctorName,
@@ -796,4 +915,64 @@ export function getActiveClinicRecord(clinicId: string): ClinicalRecord {
     console.error('Error reading active record', e);
   }
   return getBlankClinicalRecord();
+}
+
+// 8. BÓVEDA DE RESPALDO TOTAL (EXPORTAR E IMPORTAR BASE DE DATOS COMPLETA)
+export function exportMasterDatabaseBackupJSON(): string {
+  const clinics = getAllClinics();
+  const adminContact = getAdminContactInfo();
+  const allClinicData: { [clinicId: string]: { settings: DoctorSettings; records: ClinicalRecord[] } } = {};
+
+  clinics.forEach(c => {
+    allClinicData[c.id] = {
+      settings: getClinicSettings(c.id),
+      records: getClinicRecords(c.id)
+    };
+  });
+
+  const payload = {
+    system: 'CLINIC_CARE_TOY',
+    backupVersion: '2.0',
+    exportedAt: new Date().toISOString(),
+    superAdmin: 'Fernando01',
+    adminContact,
+    clinics,
+    allClinicData
+  };
+
+  return JSON.stringify(payload, null, 2);
+}
+
+export function importMasterDatabaseBackupJSON(jsonStr: string): { success: boolean; importedCount: number; error?: string } {
+  try {
+    const parsed = JSON.parse(jsonStr);
+    if (!parsed || !Array.isArray(parsed.clinics)) {
+      return { success: false, importedCount: 0, error: 'El archivo no tiene la estructura de respaldo válida.' };
+    }
+
+    const importedClinics: ClinicAccount[] = parsed.clinics;
+    saveAllClinics(importedClinics, true);
+
+    if (parsed.adminContact && typeof parsed.adminContact === 'object') {
+      saveAdminContactInfo(parsed.adminContact, true);
+    }
+
+    if (parsed.allClinicData && typeof parsed.allClinicData === 'object') {
+      Object.keys(parsed.allClinicData).forEach(cId => {
+        const item = parsed.allClinicData[cId];
+        if (item.settings) {
+          saveClinicSettings(cId, item.settings);
+        }
+        if (Array.isArray(item.records)) {
+          localStorage.setItem(`clinic_care_records_clinic_${cId}_v2`, JSON.stringify(item.records));
+          localStorage.setItem(`clinic_care_backup_records_${cId}_v2`, JSON.stringify(item.records));
+          idbSaveClinicRecords(cId, item.records).catch(() => {});
+        }
+      });
+    }
+
+    return { success: true, importedCount: importedClinics.length };
+  } catch (e: any) {
+    return { success: false, importedCount: 0, error: e?.message || 'Error al procesar el archivo JSON.' };
+  }
 }
