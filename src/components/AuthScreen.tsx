@@ -275,38 +275,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
               </div>
             </div>
 
-            {/* Quick Access Helper */}
-            <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 space-y-2">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                Acceso Rápido con 1 Clic:
-              </span>
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLoginUser('Fernando01');
-                    setLoginPass('Bazzoka1313AS.');
-                  }}
-                  className="px-2.5 py-1 text-xs font-bold rounded-xl bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 hover:bg-amber-500/20 transition-all flex items-center gap-1.5 shadow-xs"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Super Admin (Fernando01)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLoginUser('consultorio1');
-                    setLoginPass('1234');
-                  }}
-                  className="px-2.5 py-1 text-xs font-bold rounded-xl bg-sky-500/10 text-sky-800 dark:text-sky-300 border border-sky-300 dark:border-sky-700 hover:bg-sky-500/20 transition-all flex items-center gap-1.5 shadow-xs"
-                >
-                  <Building2 className="w-3.5 h-3.5 text-sky-600" />
-                  <span>Consultorio 1 (consultorio1)</span>
-                </button>
-              </div>
-            </div>
-
             <button
               type="submit"
               disabled={isSubmitting || !loginUser || !loginPass}
