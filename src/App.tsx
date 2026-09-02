@@ -216,67 +216,88 @@ export const App: React.FC = () => {
           onUpdateRecord={(updated) => setRecord(updated)}
         />
 
-        {/* Tab Selector Bar for the 4 SAC Modules */}
-        <div className="bg-white dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-1.5 flex-1">
+        {/* Tab Selector Bar for the 4 Clinical Modules */}
+        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-1.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-wrap items-center justify-between gap-2">
+          <div className="grid grid-cols-2 md:flex md:flex-wrap items-center gap-1.5 flex-1">
+            
+            {/* Step 1 */}
             <button
               type="button"
               onClick={() => setActiveTab('modulo1')}
-              className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+              className={`flex items-center justify-center sm:justify-start gap-2 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                 activeTab === 'modulo1'
-                  ? 'bg-sky-600 text-white shadow-md shadow-sky-500/20'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  ? 'bg-sky-600 text-white shadow-md shadow-sky-600/20 scale-[1.01]'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
               }`}
             >
-              <UserCheck className="w-4 h-4" />
-              <span>Módulo 1: Alta & Ficha</span>
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${
+                activeTab === 'modulo1' ? 'bg-white/25 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+              }`}>
+                1
+              </div>
+              <span className="truncate">Ficha del Paciente</span>
             </button>
 
+            {/* Step 2 */}
             <button
               type="button"
               onClick={() => setActiveTab('modulo2')}
-              className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+              className={`flex items-center justify-center sm:justify-start gap-2 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                 activeTab === 'modulo2'
-                  ? 'bg-sky-600 text-white shadow-md shadow-sky-500/20'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  ? 'bg-teal-600 text-white shadow-md shadow-teal-600/20 scale-[1.01]'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
               }`}
             >
-              <FileHeart className="w-4 h-4" />
-              <span>Módulo 2: Historia Clínica / Checkup</span>
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${
+                activeTab === 'modulo2' ? 'bg-white/25 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+              }`}>
+                2
+              </div>
+              <span className="truncate">Consulta & Receta</span>
             </button>
 
+            {/* Step 3 */}
             <button
               type="button"
               onClick={() => setActiveTab('modulo3')}
-              className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+              className={`flex items-center justify-center sm:justify-start gap-2 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                 activeTab === 'modulo3'
-                  ? 'bg-sky-600 text-white shadow-md shadow-sky-500/20'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20 scale-[1.01]'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
               }`}
             >
-              <ClipboardList className="w-4 h-4" />
-              <span>Módulo 3: Nota de Evolución</span>
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${
+                activeTab === 'modulo3' ? 'bg-white/25 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+              }`}>
+                3
+              </div>
+              <span className="truncate">Evolución</span>
             </button>
 
+            {/* Step 4 */}
             <button
               type="button"
               onClick={() => setActiveTab('modulo4')}
-              className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+              className={`flex items-center justify-center sm:justify-start gap-2 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                 activeTab === 'modulo4'
-                  ? 'bg-sky-600 text-white shadow-md shadow-sky-500/20'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20 scale-[1.01]'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
               }`}
             >
-              <Syringe className="w-4 h-4" />
-              <span>Módulo 4: Procedimientos</span>
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${
+                activeTab === 'modulo4' ? 'bg-white/25 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+              }`}>
+                4
+              </div>
+              <span className="truncate">Procedimientos</span>
             </button>
           </div>
 
           {/* Quick Copy Active Module & Dark Mode Toggle */}
-          <div className="flex items-center gap-2 px-2">
+          <div className="flex items-center gap-2 px-2 ml-auto">
             <CopyButton
               text={getCurrentModuleCopyText()}
-              label="Copiar Módulo Activo"
+              label="Copiar Nota Rápida"
               variant="primary"
               size="sm"
             />
