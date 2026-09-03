@@ -14,6 +14,7 @@ import {
   CLINICS_UPDATED_EVENT
 } from './utils/authStorage';
 import { pullClinicsFromCloud } from './utils/cloudStorage';
+import { idbGetClinicRecords } from './utils/indexedDBStorage';
 import { AuthScreen } from './components/AuthScreen';
 import { SuperAdminDashboard } from './components/SuperAdminDashboard';
 import { Header } from './components/Header';
@@ -140,6 +141,19 @@ export const App: React.FC = () => {
       };
     }
   }, [session?.clinicId]);
+
+  // Respaldo de emergencia: Si localStorage no tiene expedientes pero IndexedDB sí los tiene, restaurarlos automáticamente
+  useEffect(() => {
+    if (session?.type === 'clinic' && session.clinicId && savedRecords.length === 0) {
+      idbGetClinicRecords(session.clinicId).then(idbRecs => {
+        if (idbRecs && idbRecs.length > 0) {
+          localStorage.setItem(`clinic_care_records_clinic_${session.clinicId}_v2`, JSON.stringify(idbRecs));
+          localStorage.setItem(`clinic_care_backup_records_${session.clinicId}_v2`, JSON.stringify(idbRecs));
+          setSavedRecords(idbRecs);
+        }
+      }).catch(() => {});
+    }
+  }, [session?.clinicId, savedRecords.length]);
 
   // Dark Mode toggle
   useEffect(() => {
