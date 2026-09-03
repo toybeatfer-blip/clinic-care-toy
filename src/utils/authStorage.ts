@@ -29,6 +29,37 @@ const DELETED_CLINICS_KEY = 'clinic_care_deleted_ids_v2';
 export const ADMIN_CONTACT_EVENT = 'clinic_care_admin_contact_updated_v2';
 export const CLINICS_UPDATED_EVENT = 'clinic_care_clinics_updated_v2';
 
+// Limpieza automática y robusta de caracteres corruptos o doblemente codificados en UTF-8
+export function cleanMojibake(str?: string | null): string {
+  if (!str || typeof str !== 'string') return '';
+  let cleaned = str;
+  try {
+    if (/[\u00C0-\u00FF]/.test(cleaned)) {
+      cleaned = decodeURIComponent(escape(cleaned));
+    }
+  } catch (e) {}
+
+  return cleaned
+    .replace(/Ã¡/g, 'á')
+    .replace(/Ã©/g, 'é')
+    .replace(/Ã­/g, 'í')
+    .replace(/Ã³/g, 'ó')
+    .replace(/Ãº/g, 'ú')
+    .replace(/Ã±/g, 'ñ')
+    .replace(/Ã/g, 'Á')
+    .replace(/Ã‰/g, 'É')
+    .replace(/Ã/g, 'Í')
+    .replace(/Ã“/g, 'Ó')
+    .replace(/Ãš/g, 'Ú')
+    .replace(/Ã‘/g, 'Ñ')
+    .replace(/Cl[ǟ\u01DF\uFFFD]+nica/gi, 'Clínica')
+    .replace(/M[ǟ\u01DF\uFFFD]+dica/gi, 'Médica')
+    .replace(/Beltr[ǟ\u01DF\uFFFD]+n/gi, 'Beltrán')
+    .replace(/M[ǟ\u01DF\uFFFD]+xico/gi, 'México')
+    .replace(/comun[ǟ\u01DF\uFFFD]+cate/gi, 'comunícate')
+    .trim();
+}
+
 // Semilla de consultorios pre-configurados para evitar que la aplicación quede vacía
 export const SEED_DEFAULT_CLINICS: ClinicAccount[] = [
   {
@@ -95,10 +126,10 @@ export function getAdminContactInfo(): AdminContactInfo {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === 'object') {
         return {
-          adminName: parsed.adminName || 'Fernando (Super Administrador)',
-          phoneWhatsApp: parsed.phoneWhatsApp || '55 1234 5678',
-          email: parsed.email || 'toybeatfer@gmail.com',
-          helpMessage: parsed.helpMessage || 'Para renovar tu licencia mensual o resolver dudas sobre tu cuenta de consultorio, comunícate directamente con el administrador del sistema.',
+          adminName: cleanMojibake(parsed.adminName) || 'Fernando (Super Administrador)',
+          phoneWhatsApp: cleanMojibake(parsed.phoneWhatsApp) || '55 1234 5678',
+          email: cleanMojibake(parsed.email) || 'toybeatfer@gmail.com',
+          helpMessage: cleanMojibake(parsed.helpMessage) || 'Para renovar tu licencia mensual o resolver dudas sobre tu cuenta de consultorio, comunícate directamente con el administrador del sistema.',
           updatedAt: parsed.updatedAt || '2026-01-01T00:00:00.000Z'
         };
       }
@@ -317,21 +348,54 @@ export function getAllClinics(): ClinicAccount[] {
     return list.map((c: any) => {
       const remaining = getDaysRemaining(c.licenseValidUntil);
       const isExpired = remaining.isExpired;
+
+      let docName = cleanMojibake(c.doctorName);
+      let cName = cleanMojibake(c.clinicName);
+      let prefix = c.prefix || 'Dr.';
+      let esp = cleanMojibake(c.especialidad) || 'Medicina General';
+      let cedGen = cleanMojibake(c.cedulaGeneral);
+      let cedEsp = cleanMojibake(c.cedulaEspecialidad);
+      let uni = cleanMojibake(c.universidad);
+      let tel = cleanMojibake(c.telefono);
+      let mail = cleanMojibake(c.correo);
+      let dir = cleanMojibake(c.direccion);
+      let suc = cleanMojibake(c.sucursal);
+
+      // Si falta doctorName, clinicName o cedula, intentar recuperarlos de settings individuales
+      if ((!docName || !cName || !cedGen) && c.id) {
+        try {
+          const sRaw = localStorage.getItem(`clinic_care_settings_clinic_${c.id}_v2`) || localStorage.getItem(`clinic_care_settings_clinic_${c.id}`);
+          if (sRaw) {
+            const s = JSON.parse(sRaw);
+            if (!docName && s.doctorName) docName = cleanMojibake(s.doctorName);
+            if (!cName && s.nombreClinica) cName = cleanMojibake(s.nombreClinica);
+            if (!cedGen && s.cedulaGeneral) cedGen = cleanMojibake(s.cedulaGeneral);
+            if (!cedEsp && s.cedulaEspecialidad) cedEsp = cleanMojibake(s.cedulaEspecialidad);
+            if ((!esp || esp === 'Medicina General') && s.especialidad) esp = cleanMojibake(s.especialidad);
+            if (!uni && s.universidad) uni = cleanMojibake(s.universidad);
+            if (!tel && (s.telefonoContacto || s.telefonoClinica)) tel = cleanMojibake(s.telefonoContacto || s.telefonoClinica);
+            if (!mail && s.correoContacto) mail = cleanMojibake(s.correoContacto);
+            if (!dir && s.direccionClinica) dir = cleanMojibake(s.direccionClinica);
+            if (!suc && s.sucursal) suc = cleanMojibake(s.sucursal);
+          }
+        } catch (e) {}
+      }
+
       return {
         id: c.id || generateUUID(),
-        clinicName: c.clinicName || 'Consultorio Médico',
-        username: c.username || '',
-        passwordPlain: c.passwordPlain || '',
-        doctorName: c.doctorName || '',
-        prefix: c.prefix || 'Dr.',
-        cedulaGeneral: c.cedulaGeneral || '',
-        cedulaEspecialidad: c.cedulaEspecialidad || '',
-        especialidad: c.especialidad || 'Medicina General',
-        universidad: c.universidad || '',
-        telefono: c.telefono || '',
-        correo: c.correo || '',
-        direccion: c.direccion || '',
-        sucursal: c.sucursal || '',
+        clinicName: cName || 'Consultorio Médico',
+        username: (c.username || '').trim(),
+        passwordPlain: (c.passwordPlain || '').trim(),
+        doctorName: docName || 'Médico Responsable',
+        prefix,
+        cedulaGeneral: cedGen,
+        cedulaEspecialidad: cedEsp,
+        especialidad: esp,
+        universidad: uni,
+        telefono: tel,
+        correo: mail,
+        direccion: dir,
+        sucursal: suc,
         logoUrl: c.logoUrl || '',
         primaryColor: c.primaryColor || 'sky',
         createdAt: c.createdAt || new Date().toISOString(),
@@ -446,15 +510,17 @@ export function updateClinic(clinicId: string, updates: Partial<ClinicAccount>):
   });
   saveAllClinics(next, true);
 
+  const updatedAccount = next.find(c => c.id === clinicId);
+  if (updatedAccount) {
+    initClinicDatabase(updatedAccount);
+  }
+
   const currentSession = getCurrentSession();
-  if (currentSession && currentSession.clinicId === clinicId) {
-    const updatedAccount = next.find(c => c.id === clinicId);
-    if (updatedAccount) {
-      saveSession({
-        ...currentSession,
-        clinicAccount: updatedAccount
-      });
-    }
+  if (currentSession && currentSession.clinicId === clinicId && updatedAccount) {
+    saveSession({
+      ...currentSession,
+      clinicAccount: updatedAccount
+    });
   }
 
   return next;
@@ -755,18 +821,18 @@ export function initClinicDatabase(clinic: ClinicAccount): void {
   }
 
   const doctorSettings: DoctorSettings = {
-    doctorName: clinic.doctorName || '',
+    doctorName: cleanMojibake(clinic.doctorName) || 'Médico Responsable',
     prefix: clinic.prefix || 'Dr.',
-    cedulaGeneral: clinic.cedulaGeneral || '',
-    cedulaEspecialidad: clinic.cedulaEspecialidad || '',
-    especialidad: clinic.especialidad || 'Medicina General',
-    universidad: clinic.universidad || '',
-    telefonoContacto: clinic.telefono || '',
-    correoContacto: clinic.correo || '',
-    nombreClinica: clinic.clinicName || 'Consultorio Médico',
-    sucursal: clinic.sucursal || '',
-    direccionClinica: clinic.direccion || '',
-    telefonoClinica: clinic.telefono || '',
+    cedulaGeneral: cleanMojibake(clinic.cedulaGeneral) || '',
+    cedulaEspecialidad: cleanMojibake(clinic.cedulaEspecialidad) || '',
+    especialidad: cleanMojibake(clinic.especialidad) || 'Medicina General',
+    universidad: cleanMojibake(clinic.universidad) || '',
+    telefonoContacto: cleanMojibake(clinic.telefono) || '',
+    correoContacto: cleanMojibake(clinic.correo) || '',
+    nombreClinica: cleanMojibake(clinic.clinicName) || 'Consultorio Médico',
+    sucursal: cleanMojibake(clinic.sucursal) || '',
+    direccionClinica: cleanMojibake(clinic.direccion) || '',
+    telefonoClinica: cleanMojibake(clinic.telefono) || '',
     logoUrl: clinic.logoUrl || '',
     primaryColor: clinic.primaryColor || 'sky'
   };
@@ -836,48 +902,65 @@ export function deleteClinicRecord(clinicId: string, recordId: string): Clinical
 }
 
 export function getClinicSettings(clinicId: string): DoctorSettings {
+  if (!clinicId) {
+    return {
+      doctorName: '',
+      prefix: 'Dr.',
+      cedulaGeneral: '',
+      cedulaEspecialidad: '',
+      especialidad: 'Medicina General',
+      universidad: '',
+      telefonoContacto: '',
+      correoContacto: '',
+      nombreClinica: 'Consultorio Médico',
+      sucursal: '',
+      direccionClinica: '',
+      telefonoClinica: '',
+      logoUrl: '',
+      primaryColor: 'sky'
+    };
+  }
+
+  // Cross-check con el directorio maestro de consultorios
+  const allClinics = getAllClinics();
+  const clinic = allClinics.find(c => c.id === clinicId);
+
+  let parsed: any = null;
   try {
     const raw = localStorage.getItem(`clinic_care_settings_clinic_${clinicId}_v2`) || localStorage.getItem(`clinic_care_settings_clinic_${clinicId}`);
     if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object') {
-        return {
-          doctorName: parsed.doctorName || '',
-          prefix: parsed.prefix || 'Dr.',
-          cedulaGeneral: parsed.cedulaGeneral || '',
-          cedulaEspecialidad: parsed.cedulaEspecialidad || '',
-          especialidad: parsed.especialidad || 'Medicina General',
-          universidad: parsed.universidad || '',
-          telefonoContacto: parsed.telefonoContacto || '',
-          correoContacto: parsed.correoContacto || '',
-          nombreClinica: parsed.nombreClinica || '',
-          sucursal: parsed.sucursal || '',
-          direccionClinica: parsed.direccionClinica || '',
-          telefonoClinica: parsed.telefonoClinica || '',
-          logoUrl: parsed.logoUrl || '',
-          primaryColor: parsed.primaryColor || 'sky'
-        };
-      }
+      parsed = JSON.parse(raw);
     }
   } catch (e) {
     console.error('Error reading clinic settings', e);
   }
-  return {
-    doctorName: '',
-    prefix: 'Dr.',
-    cedulaGeneral: '',
-    cedulaEspecialidad: '',
-    especialidad: 'Medicina General',
-    universidad: '',
-    telefonoContacto: '',
-    correoContacto: '',
-    nombreClinica: '',
-    sucursal: '',
-    direccionClinica: '',
-    telefonoClinica: '',
-    logoUrl: '',
-    primaryColor: 'sky'
+
+  const resolved: DoctorSettings = {
+    doctorName: cleanMojibake(parsed?.doctorName) || cleanMojibake(clinic?.doctorName) || 'Médico Responsable',
+    prefix: parsed?.prefix || clinic?.prefix || 'Dr.',
+    cedulaGeneral: cleanMojibake(parsed?.cedulaGeneral) || cleanMojibake(clinic?.cedulaGeneral) || '',
+    cedulaEspecialidad: cleanMojibake(parsed?.cedulaEspecialidad) || cleanMojibake(clinic?.cedulaEspecialidad) || '',
+    especialidad: cleanMojibake(parsed?.especialidad) || cleanMojibake(clinic?.especialidad) || 'Medicina General',
+    universidad: cleanMojibake(parsed?.universidad) || cleanMojibake(clinic?.universidad) || '',
+    telefonoContacto: cleanMojibake(parsed?.telefonoContacto) || cleanMojibake(clinic?.telefono) || '',
+    correoContacto: cleanMojibake(parsed?.correoContacto) || cleanMojibake(clinic?.correo) || '',
+    nombreClinica: cleanMojibake(parsed?.nombreClinica) || cleanMojibake(clinic?.clinicName) || 'Consultorio Médico',
+    sucursal: cleanMojibake(parsed?.sucursal) || cleanMojibake(clinic?.sucursal) || '',
+    direccionClinica: cleanMojibake(parsed?.direccionClinica) || cleanMojibake(clinic?.direccion) || '',
+    telefonoClinica: cleanMojibake(parsed?.telefonoClinica) || cleanMojibake(clinic?.telefono) || '',
+    logoUrl: parsed?.logoUrl || clinic?.logoUrl || '',
+    primaryColor: parsed?.primaryColor || clinic?.primaryColor || 'sky'
   };
+
+  // Si no existía o estaba incompleta la configuración local, persistirla
+  try {
+    if (!parsed || !parsed.doctorName || !parsed.nombreClinica) {
+      localStorage.setItem(`clinic_care_settings_clinic_${clinicId}_v2`, JSON.stringify(resolved));
+      idbSaveClinicSettings(clinicId, resolved).catch(() => {});
+    }
+  } catch (e) {}
+
+  return resolved;
 }
 
 export function saveClinicSettings(clinicId: string, settings: DoctorSettings): void {
@@ -975,4 +1058,99 @@ export function importMasterDatabaseBackupJSON(jsonStr: string): { success: bool
   } catch (e: any) {
     return { success: false, importedCount: 0, error: e?.message || 'Error al procesar el archivo JSON.' };
   }
+}
+
+// 9. ESCANEO PROFUNDO Y RECUPERACIÓN MULTI-CAPA DE CONSULTORIOS Y MÉDICOS
+export async function deepScanAllClinics(): Promise<{ recoveredCount: number; clinics: ClinicAccount[] }> {
+  const deletedIds = getDeletedClinicIds();
+  const clinicsMap = new Map<string, ClinicAccount>();
+
+  // 1. Cargar desde la memoria actual
+  getAllClinics().forEach(c => {
+    if (c && c.id && !deletedIds.has(c.id)) {
+      clinicsMap.set(c.id, c);
+    }
+  });
+
+  // 2. Cargar desde IndexedDB
+  try {
+    const idbList = await idbGetClinics();
+    idbList.forEach(c => {
+      if (c && c.id && !deletedIds.has(c.id) && !clinicsMap.has(c.id)) {
+        clinicsMap.set(c.id, c);
+      }
+    });
+  } catch (e) {}
+
+  // 3. Cargar desde todas las claves de snapshots y respaldos
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && (k.startsWith('clinic_care_snapshot_') || k.includes('vault') || k.includes('backup') || k.includes('master'))) {
+        try {
+          const raw = localStorage.getItem(k);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            const list = Array.isArray(parsed) ? parsed : (Array.isArray(parsed?.clinics) ? parsed.clinics : []);
+            list.forEach((c: any) => {
+              if (c && c.id && !deletedIds.has(c.id)) {
+                if (!clinicsMap.has(c.id)) {
+                  clinicsMap.set(c.id, c);
+                }
+              }
+            });
+          }
+        } catch (e) {}
+      }
+    }
+  } catch (e) {}
+
+  // 4. Cargar desde claves de configuración individuales
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+      if (key.startsWith('clinic_care_settings_clinic_') || key.startsWith('clinic_care_records_clinic_')) {
+        const cId = key.replace('clinic_care_settings_clinic_', '').replace('clinic_care_records_clinic_', '').replace('_v2', '');
+        if (cId && !deletedIds.has(cId) && !clinicsMap.has(cId)) {
+          try {
+            const settingsRaw = localStorage.getItem(`clinic_care_settings_clinic_${cId}_v2`) || localStorage.getItem(`clinic_care_settings_clinic_${cId}`);
+            let s: any = {};
+            if (settingsRaw) s = JSON.parse(settingsRaw);
+            const rec: ClinicAccount = {
+              id: cId,
+              clinicName: cleanMojibake(s.nombreClinica) || `Consultorio ${cId.substring(0, 8)}`,
+              username: (s.username || `consultorio_${cId.substring(0, 6)}`).trim(),
+              passwordPlain: (s.passwordPlain || '1234').trim(),
+              doctorName: cleanMojibake(s.doctorName) || 'Médico Responsable',
+              prefix: s.prefix || 'Dr.',
+              cedulaGeneral: cleanMojibake(s.cedulaGeneral),
+              cedulaEspecialidad: cleanMojibake(s.cedulaEspecialidad),
+              especialidad: cleanMojibake(s.especialidad) || 'Medicina General',
+              universidad: cleanMojibake(s.universidad),
+              telefono: cleanMojibake(s.telefonoContacto || s.telefonoClinica),
+              correo: cleanMojibake(s.correoContacto),
+              direccion: cleanMojibake(s.direccionClinica),
+              sucursal: cleanMojibake(s.sucursal),
+              logoUrl: s.logoUrl || '',
+              primaryColor: s.primaryColor || 'sky',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              lastLoginAt: new Date().toISOString(),
+              licenseStatus: 'active',
+              licenseValidUntil: 'Indefinida'
+            };
+            clinicsMap.set(cId, rec);
+          } catch (e) {}
+        }
+      }
+    }
+  } catch (e) {}
+
+  const finalList = Array.from(clinicsMap.values());
+  saveAllClinics(finalList, false);
+  finalList.forEach(c => initClinicDatabase(c));
+  await idbSaveClinics(finalList);
+
+  return { recoveredCount: finalList.length, clinics: finalList };
 }

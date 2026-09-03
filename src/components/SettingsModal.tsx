@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { X, UserCog, Building2, Image as ImageIcon, Palette, Check, Upload, Trash2, Stethoscope, HeartPulse, Cross, Hospital, ShieldCheck, Sparkles } from 'lucide-react';
 import { DoctorSettings } from '../types';
 import { FieldWithCopy } from './FieldWithCopy';
@@ -29,6 +29,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [activeTab, setActiveTab] = useState<'doctor' | 'clinic' | 'logo' | 'theme'>('doctor');
   const [formData, setFormData] = useState<DoctorSettings>(settings);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setFormData(settings);
+    }
+  }, [settings, isOpen]);
 
   if (!isOpen) return null;
 

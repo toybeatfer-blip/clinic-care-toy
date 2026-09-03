@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ClinicalRecord, DoctorSettings, SessionUser } from './types';
+import { ClinicalRecord, DoctorSettings, SessionUser, ClinicAccount } from './types';
 import {
   getCurrentSession,
   clearSession,
@@ -174,6 +174,26 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleImpersonateClinic = (clinic: ClinicAccount) => {
+    const tempSession: SessionUser = {
+      type: 'clinic',
+      clinicId: clinic.id,
+      username: clinic.username,
+      clinicAccount: clinic,
+      isSuperAdminViewing: true
+    };
+    handleLoginSuccess(tempSession);
+  };
+
+  const handleReturnToSuperAdmin = () => {
+    const adminSession: SessionUser = {
+      type: 'superadmin',
+      username: 'Fernando01'
+    };
+    saveSession(adminSession);
+    setSession(adminSession);
+  };
+
   // 1. Si no hay sesión -> Pantalla de Inicio de Sesión / Registro
   if (!session) {
     return <AuthScreen onLoginSuccess={handleLoginSuccess} />;
@@ -181,13 +201,32 @@ export const App: React.FC = () => {
 
   // 2. Si es Super Administrador (Fernando01) -> Panel de Control Maestro
   if (session.type === 'superadmin') {
-    return <SuperAdminDashboard onLogout={handleLogout} />;
+    return <SuperAdminDashboard onLogout={handleLogout} onImpersonateClinic={handleImpersonateClinic} />;
   }
 
   // 3. Si es un Consultorio Médico -> Espacio de Trabajo Clínico Aislado
   return (
     <div className="min-h-screen flex flex-col bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans selection:bg-sky-500 selection:text-white transition-colors duration-150">
       
+      {/* Super Admin Impersonation Bar */}
+      {session?.isSuperAdminViewing && (
+        <div className="bg-gradient-to-r from-sky-700 via-indigo-700 to-purple-800 text-white px-4 py-2 flex items-center justify-between shadow-lg sticky top-0 z-50 text-xs sm:text-sm">
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded-lg bg-white/20 font-black text-xs uppercase tracking-wide">🛡️ Modo Super Admin</span>
+            <span className="hidden sm:inline">Visualizando consultorio:</span>
+            <strong>{session.clinicAccount?.clinicName}</strong>
+            <span className="text-sky-200">({session.clinicAccount?.prefix} {session.clinicAccount?.doctorName})</span>
+          </div>
+          <button
+            type="button"
+            onClick={handleReturnToSuperAdmin}
+            className="px-3 py-1 bg-white text-slate-900 hover:bg-slate-100 font-bold rounded-xl shadow transition-all flex items-center gap-1.5 text-xs shrink-0"
+          >
+            <span>⬅️ Regresar al Panel Super Admin</span>
+          </button>
+        </div>
+      )}
+
       {/* Top Main Navigation Header */}
       <Header
         ticketFolio={record.ticketFolio || ''}

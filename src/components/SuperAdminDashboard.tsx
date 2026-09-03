@@ -22,7 +22,8 @@ import {
   AlertCircle,
   RefreshCw,
   Plus,
-  Database
+  Database,
+  Eye
 } from 'lucide-react';
 import { ClinicAccount, AdminContactInfo } from '../types';
 import {
@@ -36,6 +37,8 @@ import {
   getAdminContactInfo,
   exportMasterDatabaseBackupJSON,
   importMasterDatabaseBackupJSON,
+  deepScanAllClinics,
+  initClinicDatabase,
   CLINICS_UPDATED_EVENT,
   ADMIN_CONTACT_EVENT
 } from '../utils/authStorage';
@@ -50,9 +53,10 @@ import { Cloud, CloudLightning } from 'lucide-react';
 
 interface SuperAdminDashboardProps {
   onLogout: () => void;
+  onImpersonateClinic?: (clinic: ClinicAccount) => void;
 }
 
-export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogout }) => {
+export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogout, onImpersonateClinic }) => {
   const [clinics, setClinics] = useState<ClinicAccount[]>(() => getAllClinics());
   const [searchTerm, setSearchTerm] = useState('');
   const [editingClinic, setEditingClinic] = useState<ClinicAccount | null>(null);
@@ -80,15 +84,18 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
   // Función de escaneo profundo y recuperación de consultorios previos
   const handleDeepScan = async () => {
     setIsRefreshing(true);
-    const recovered = getAllClinics();
-    setClinics(recovered);
-    const pushResult = await pushClinicsToCloud(recovered);
+    try {
+      await pullClinicsFromCloud();
+    } catch (e) {}
+    const { recoveredCount, clinics: rec } = await deepScanAllClinics();
+    setClinics(rec);
+    const pushResult = await pushClinicsToCloud(rec);
     setLastSyncTime(getLastCloudSyncTime());
     setIsRefreshing(false);
     if (pushResult.success) {
-      alert(`✅ Escaneo y recuperación completada:\n\nSe detectaron ${recovered.length} consultorios y se sincronizaron con éxito en la nube.`);
+      alert(`✅ Escaneo y recuperación completada:\n\nSe detectaron ${rec.length} consultorios y médicos registrados y se blindaron con éxito en la nube.`);
     } else {
-      alert(`ℹ️ Se recuperaron ${recovered.length} consultorios en la memoria local.`);
+      alert(`ℹ️ Se recuperaron ${rec.length} consultorios en la memoria local blindada.`);
     }
   };
 
@@ -163,6 +170,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
     const all = getAllClinics();
     const updated = all.map(c => c.id === editingClinic.id ? freshClinic : c);
     saveAllClinics(updated, true);
+    initClinicDatabase(freshClinic);
     setClinics(updated);
     setEditingClinic(null);
   };
@@ -489,12 +497,18 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
                         <td className="py-3.5 px-4">
                           <div className="font-bold text-white text-sm">{c.clinicName}</div>
                           <div className="text-slate-400 text-[11px] flex items-center gap-1.5 mt-0.5">
-                            <span className="text-sky-400 font-semibold">{c.prefix} {c.doctorName}</span>
+                            <span className="text-sky-400 font-semibold">{c.prefix} {c.doctorName || 'Médico Responsable'}</span>
+                            {c.especialidad && <span className="text-teal-400 font-medium">• {c.especialidad}</span>}
                             {c.sucursal && <span>• {c.sucursal}</span>}
                           </div>
                           {c.telefono && (
                             <div className="text-[10px] text-slate-400 font-mono mt-0.5">
                               📞 {c.telefono} {c.correo ? `• ✉️ ${c.correo}` : ''}
+                            </div>
+                          )}
+                          {c.direccion && (
+                            <div className="text-[10px] text-slate-500 truncate max-w-xs mt-0.5">
+                              📍 {c.direccion}
                             </div>
                           )}
                         </td>
@@ -507,6 +521,11 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
                           <div className="text-[10px] text-slate-400 mt-1">
                             Céd: {c.cedulaGeneral || 'Sin cédula'}
                           </div>
+                          {c.cedulaEspecialidad && (
+                            <div className="text-[10px] text-teal-400 mt-0.5">
+                              Esp: {c.cedulaEspecialidad}
+                            </div>
+                          )}
                         </td>
 
                         {/* Plain Password */}
@@ -578,6 +597,19 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
                         <td className="py-3.5 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
                             
+                            {/* Ver / Acceder al Consultorio */}
+                            {onImpersonateClinic && (
+                              <button
+                                type="button"
+                                onClick={() => onImpersonateClinic(c)}
+                                className="px-2 py-1.5 rounded-lg bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 border border-sky-500/40 text-[11px] font-bold transition-all flex items-center gap-1 shadow-sm"
+                                title="Ingresar directamente y ver el consultorio, recetas y pacientes como lo ve el médico"
+                              >
+                                <Eye className="w-3.5 h-3.5 text-sky-400" />
+                                <span>Ver</span>
+                              </button>
+                            )}
+
                             {/* Quick +1 Month Button */}
                             <button
                               type="button"
@@ -653,19 +685,44 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
             </div>
 
             <form onSubmit={handleSaveEdit} className="space-y-3 text-xs">
-              <div className="space-y-1">
-                <label className="font-semibold text-slate-300">Nombre de la Clínica / Consultorio</label>
-                <input
-                  type="text"
-                  required
-                  value={editingClinic.clinicName}
-                  onChange={(e) => setEditingClinic({ ...editingClinic, clinicName: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
-                />
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2 space-y-1">
+                  <label className="font-semibold text-slate-300">Nombre de la Clínica / Consultorio</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingClinic.clinicName}
+                    onChange={(e) => setEditingClinic({ ...editingClinic, clinicName: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="font-semibold text-slate-300">Sucursal</label>
+                  <input
+                    type="text"
+                    value={editingClinic.sucursal || ''}
+                    onChange={(e) => setEditingClinic({ ...editingClinic, sucursal: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    placeholder="Matriz..."
+                  />
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-4 gap-3">
                 <div className="space-y-1">
+                  <label className="font-semibold text-slate-300">Prefijo</label>
+                  <select
+                    value={editingClinic.prefix || 'Dr.'}
+                    onChange={(e) => setEditingClinic({ ...editingClinic, prefix: e.target.value as any })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  >
+                    <option value="Dr.">Dr.</option>
+                    <option value="Dra.">Dra.</option>
+                    <option value="Médico">Médico</option>
+                  </select>
+                </div>
+
+                <div className="col-span-3 space-y-1">
                   <label className="font-semibold text-slate-300">Médico Responsable</label>
                   <input
                     type="text"
@@ -675,7 +732,9 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
                     className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
                   />
                 </div>
+              </div>
 
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="font-semibold text-slate-300">Cédula General</label>
                   <input
@@ -686,6 +745,48 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
                     className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono"
                   />
                 </div>
+
+                <div className="space-y-1">
+                  <label className="font-semibold text-slate-300">Cédula Especialidad (opcional)</label>
+                  <input
+                    type="text"
+                    value={editingClinic.cedulaEspecialidad || ''}
+                    onChange={(e) => setEditingClinic({ ...editingClinic, cedulaEspecialidad: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-semibold text-slate-300">Especialidad</label>
+                  <input
+                    type="text"
+                    value={editingClinic.especialidad || 'Medicina General'}
+                    onChange={(e) => setEditingClinic({ ...editingClinic, especialidad: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-semibold text-slate-300">Teléfono</label>
+                  <input
+                    type="text"
+                    value={editingClinic.telefono || ''}
+                    onChange={(e) => setEditingClinic({ ...editingClinic, telefono: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-300">Dirección de Consulta</label>
+                <input
+                  type="text"
+                  value={editingClinic.direccion || ''}
+                  onChange={(e) => setEditingClinic({ ...editingClinic, direccion: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-3">

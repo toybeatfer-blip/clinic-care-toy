@@ -204,6 +204,7 @@ export interface SessionUser {
   clinicId?: string;
   username: string;
   clinicAccount?: ClinicAccount;
+  isSuperAdminViewing?: boolean;
 }
 
 export interface Cie10Item {
