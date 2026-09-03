@@ -21,6 +21,7 @@ import {
 import { CopyButton } from './CopyButton';
 import { DoctorSettings, SessionUser } from '../types';
 import { getDaysRemaining } from '../utils/authStorage';
+import { CREATOR_LOGO_BASE64 } from '../constants/creatorBranding';
 
 interface HeaderProps {
   ticketFolio: string;
@@ -97,6 +98,17 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Left: Brand, Clinic and Doctor Identity */}
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
+              {/* Sello Oficial e Inalterable del Creador: TOY */}
+              <div className="flex items-center gap-2 border-r border-slate-200 dark:border-slate-800 pr-3 shrink-0" title="CLINIC CARE TOY • Desarrollado y Blindado por Toy">
+                <div className="w-10 h-10 rounded-2xl bg-white p-1 border-2 border-slate-300 dark:border-slate-700 shadow-sm flex items-center justify-center overflow-hidden shrink-0">
+                  <img src={CREATOR_LOGO_BASE64} alt="Toy Logo" className="max-w-full max-h-full object-contain" />
+                </div>
+                <div className="hidden xl:block leading-none">
+                  <div className="text-[10px] font-black text-slate-900 dark:text-white tracking-wider">CLINIC CARE</div>
+                  <div className="text-[9px] font-bold text-sky-600 dark:text-sky-400 tracking-widest mt-0.5">BY TOY</div>
+                </div>
+              </div>
+
               {doctorSettings.logoUrl ? (
                 <div className="w-10 h-10 rounded-2xl bg-white dark:bg-slate-800 p-1 border border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden shadow-sm shrink-0">
                   <img src={doctorSettings.logoUrl} alt="Logo" className="max-w-full max-h-full object-contain" />

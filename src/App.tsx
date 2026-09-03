@@ -31,6 +31,7 @@ import { PrintablePrescriptionModal } from './components/PrintablePrescriptionMo
 import { SettingsModal } from './components/SettingsModal';
 import { SpecialistToolsModal } from './components/SpecialistToolsModal';
 import { PatientTimelineModal } from './components/PatientTimelineModal';
+import { CREATOR_LOGO_BASE64 } from './constants/creatorBranding';
 import {
   UserCheck,
   FileHeart,
@@ -500,6 +501,23 @@ export const App: React.FC = () => {
               <LogOut className="w-3 h-3" />
               <span>Cerrar Sesión</span>
             </button>
+          </div>
+        </div>
+
+        {/* Sello Inalterable del Creador: TOY */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2.5 mt-2 border-t border-slate-100 dark:border-slate-800/60 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-400 gap-2">
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 rounded-md bg-white p-0.5 border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-center shrink-0">
+              <img src={CREATOR_LOGO_BASE64} alt="Toy Logo" className="w-full h-full object-contain" />
+            </div>
+            <span className="font-bold text-slate-700 dark:text-slate-300">CLINIC CARE TOY</span>
+            <span>•</span>
+            <span className="text-sky-600 dark:text-sky-400 font-semibold">Desarrollado y Blindado por Toy</span>
+          </div>
+          <div className="flex items-center gap-2 text-[10px]">
+            <span>Sello Oficial de Autor & Marca Registrada</span>
+            <span>•</span>
+            <span>NOM-004-SSA3-2012</span>
           </div>
         </div>
       </footer>

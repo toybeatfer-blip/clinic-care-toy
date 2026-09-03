@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Printer, Stethoscope, Pill, Check, Building2, User, Phone, Mail, FlaskConical, Calendar, Camera } from 'lucide-react';
 import { ClinicalRecord, DoctorSettings } from '../types';
+import { CREATOR_LOGO_BASE64 } from '../constants/creatorBranding';
 
 interface PrintableNoteModalProps {
   isOpen: boolean;
@@ -318,6 +319,18 @@ export const PrintableNoteModal: React.FC<PrintableNoteModalProps> = ({
               </span>
             </div>
           </div>
+
+          {/* Software Creator Certification Stamp */}
+          <div className="pt-4 mt-6 border-t border-slate-200 flex items-center justify-between text-[9px] text-slate-500 font-medium">
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded bg-white border border-slate-300 p-0.5 flex items-center justify-center shrink-0">
+                <img src={CREATOR_LOGO_BASE64} alt="Toy" className="w-full h-full object-contain" />
+              </div>
+              <span>Expediente Clínico Electrónico • Plataforma Clinic Care Toy (Desarrollado y Blindado por Toy)</span>
+            </div>
+            <span className="font-mono text-slate-400">NOM-004-SSA3-2012</span>
+          </div>
+
         </div>
       </div>
     </div>

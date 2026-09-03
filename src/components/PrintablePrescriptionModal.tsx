@@ -16,6 +16,7 @@ import {
   Heart
 } from 'lucide-react';
 import { ClinicalRecord, DoctorSettings } from '../types';
+import { CREATOR_LOGO_BASE64 } from '../constants/creatorBranding';
 
 interface PrintablePrescriptionModalProps {
   isOpen: boolean;
@@ -279,6 +280,14 @@ export const PrintablePrescriptionModal: React.FC<PrintablePrescriptionModalProp
                 <p className="font-mono text-[9px] text-slate-400">
                   Emitido por sistema: {doctorSettings.nombreClinica || 'CLINIC CARE TOY'}
                 </p>
+                <div className="flex items-center gap-1.5 pt-1.5 border-t border-slate-200">
+                  <div className="w-5 h-5 rounded bg-white p-0.5 border border-slate-300 flex items-center justify-center shrink-0">
+                    <img src={CREATOR_LOGO_BASE64} alt="Toy" className="w-full h-full object-contain" />
+                  </div>
+                  <span className="text-[9px] text-slate-600 font-semibold">
+                    Sistema Clínico • Desarrollado y Blindado por Toy (Marca Registrada)
+                  </span>
+                </div>
               </div>
 
               {/* Recuadro de Sello y Firma */}

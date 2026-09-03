@@ -50,6 +50,7 @@ import {
 import { AdminContactModal } from './AdminContactModal';
 import { CreateClinicModal } from './CreateClinicModal';
 import { Cloud, CloudLightning } from 'lucide-react';
+import { CREATOR_LOGO_BASE64 } from '../constants/creatorBranding';
 
 interface SuperAdminDashboardProps {
   onLogout: () => void;
@@ -241,7 +242,12 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
       <header className="bg-slate-950 border-b border-slate-800 sticky top-0 z-30 shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-rose-600 flex items-center justify-center text-white shadow-md shadow-rose-500/20">
+            {/* Sello Oficial del Creador: TOY */}
+            <div className="w-12 h-12 rounded-2xl bg-white p-1 border-2 border-amber-500/40 shadow-lg shadow-amber-500/10 flex items-center justify-center overflow-hidden shrink-0" title="Sello Oficial del Creador - TOY">
+              <img src={CREATOR_LOGO_BASE64} alt="Toy Creador" className="w-full h-full object-contain" />
+            </div>
+
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-rose-600 flex items-center justify-center text-white shadow-md shadow-rose-500/20 shrink-0">
               <ShieldCheck className="w-6 h-6" />
             </div>
             <div>
@@ -250,11 +256,11 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
                   Panel de Super Administrador
                 </h1>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                  Fernando01
+                  Fernando01 (Creador)
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                Control de consultorios, licencias mensuales de 1 mes y base de datos
+                Clinic Care Toy • Control maestro de consultorios, licencias y base de datos
               </p>
             </div>
           </div>

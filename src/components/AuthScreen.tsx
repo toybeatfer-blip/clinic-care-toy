@@ -22,6 +22,7 @@ import { authenticateUser, registerClinic, getAdminContactInfo } from '../utils/
 import { pullClinicsFromCloud } from '../utils/cloudStorage';
 import { SessionUser } from '../types';
 import { SuspendedLicenseNoticeModal } from './SuspendedLicenseNoticeModal';
+import { CREATOR_LOGO_BASE64 } from '../constants/creatorBranding';
 
 interface AuthScreenProps {
   onLoginSuccess: (session: SessionUser) => void;
@@ -150,16 +151,22 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-sky-950 to-slate-900 flex flex-col justify-center items-center p-4 sm:p-6 text-slate-100 selection:bg-sky-500 selection:text-white">
       
       {/* Brand Header */}
-      <div className="text-center mb-5 max-w-md">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 shadow-xl shadow-sky-500/20 mb-3 text-white">
-          <Stethoscope className="w-9 h-9" />
+      <div className="text-center mb-5 max-w-md flex flex-col items-center">
+        <div className="relative inline-flex items-center justify-center w-24 h-24 rounded-3xl bg-white p-2 shadow-2xl shadow-sky-500/30 mb-3 border-2 border-white/30 backdrop-blur-sm">
+          <img src={CREATOR_LOGO_BASE64} alt="Toy Logo Oficial" className="w-full h-full object-contain" />
+          <div className="absolute -bottom-1 -right-1 bg-gradient-to-tr from-teal-500 to-sky-600 p-1.5 rounded-xl text-white shadow-md border-2 border-slate-900">
+            <Stethoscope className="w-4 h-4" />
+          </div>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight bg-gradient-to-r from-sky-300 via-white to-indigo-200 bg-clip-text text-transparent">
+        <h1 className="text-2xl sm:text-3xl font-black tracking-tight bg-gradient-to-r from-sky-300 via-white to-indigo-200 bg-clip-text text-transparent">
           CLINIC CARE TOY
         </h1>
         <p className="text-xs sm:text-sm text-sky-200/80 mt-1">
           Plataforma de Consultorios Médicos Independientes & Copiloto SAC (NOM-004)
         </p>
+        <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/80 text-[11px] text-sky-300 font-semibold shadow-inner">
+          <span>Creador & Autor Oficial: Toy</span>
+        </div>
       </div>
 
       {/* Main Auth Card */}
@@ -502,10 +509,20 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
         isSuspended={isSuspendedState}
       />
 
-      {/* Footer Info */}
-      <p className="text-[11px] text-slate-400 mt-6 text-center">
-        Sistema Administrador de Consultorios • NOM-004-SSA3-2012 • Licencias Mensuales
-      </p>
+      {/* Footer Info con Sello del Creador */}
+      <footer className="mt-6 flex flex-col items-center gap-1.5 text-center">
+        <div className="flex items-center gap-2 text-slate-400 text-xs">
+          <div className="w-5 h-5 rounded-md bg-white p-0.5 border border-slate-700 flex items-center justify-center shrink-0">
+            <img src={CREATOR_LOGO_BASE64} alt="Toy" className="w-full h-full object-contain" />
+          </div>
+          <span className="font-bold text-slate-300">Clinic Care Toy</span>
+          <span>•</span>
+          <span className="text-sky-400 font-semibold">Desarrollado y Blindado por Toy</span>
+        </div>
+        <p className="text-[10px] text-slate-500">
+          Norma Oficial Mexicana NOM-004-SSA3-2012 • Todos los derechos reservados
+        </p>
+      </footer>
     </div>
   );
 };
