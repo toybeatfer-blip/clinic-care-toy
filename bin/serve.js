@@ -29,7 +29,8 @@ function loadDatabase() {
     },
     clinics: [],
     deletedClinicIds: [],
-    clinicRecords: {}
+    clinicRecords: {},
+    clinicSettings: {}
   };
 
   if (fs.existsSync(dbFilePath)) {
@@ -43,7 +44,8 @@ function loadDatabase() {
           adminContact: parsed.adminContact || db.adminContact,
           clinics: Array.isArray(parsed.clinics) ? parsed.clinics : [],
           deletedClinicIds: Array.isArray(parsed.deletedClinicIds) ? parsed.deletedClinicIds : [],
-          clinicRecords: (parsed.clinicRecords && typeof parsed.clinicRecords === 'object') ? parsed.clinicRecords : {}
+          clinicRecords: (parsed.clinicRecords && typeof parsed.clinicRecords === 'object') ? parsed.clinicRecords : {},
+          clinicSettings: (parsed.clinicSettings && typeof parsed.clinicSettings === 'object') ? parsed.clinicSettings : {}
         };
       }
     } catch (e) {
@@ -59,6 +61,15 @@ function loadDatabase() {
       if (parsedSeed && typeof parsedSeed === 'object') {
         db.adminContact = parsedSeed.adminContact || db.adminContact;
         db.clinics = Array.isArray(parsedSeed.clinics) ? parsedSeed.clinics : [];
+        if (parsedSeed.clinicRecords && typeof parsedSeed.clinicRecords === 'object') {
+          db.clinicRecords = parsedSeed.clinicRecords;
+        }
+        if (parsedSeed.clinicSettings && typeof parsedSeed.clinicSettings === 'object') {
+          db.clinicSettings = parsedSeed.clinicSettings;
+        }
+        if (Array.isArray(parsedSeed.deletedClinicIds)) {
+          db.deletedClinicIds = parsedSeed.deletedClinicIds;
+        }
         try {
           fs.writeFileSync(dbFilePath, JSON.stringify(db, null, 2), 'utf8');
         } catch (e) {}
@@ -75,13 +86,16 @@ function saveDatabase() {
   try {
     masterDb.updatedAt = new Date().toISOString();
     fs.writeFileSync(dbFilePath, JSON.stringify(masterDb, null, 2), 'utf8');
-    // Mantener también public/cloud_clinics.json actualizado
+    // Mantener también public/cloud_clinics.json actualizado con todos los datos
     try {
       const publicExport = {
         superAdmin: masterDb.superAdmin,
         updatedAt: masterDb.updatedAt,
         adminContact: masterDb.adminContact,
-        clinics: masterDb.clinics
+        clinics: masterDb.clinics,
+        deletedClinicIds: masterDb.deletedClinicIds,
+        clinicRecords: masterDb.clinicRecords,
+        clinicSettings: masterDb.clinicSettings
       };
       fs.writeFileSync(publicSeedPath, JSON.stringify(publicExport, null, 2), 'utf8');
     } catch (e) {}
@@ -180,7 +194,8 @@ const requestHandler = (req, res) => {
       adminContact: masterDb.adminContact,
       clinics: masterDb.clinics,
       deletedClinicIds: masterDb.deletedClinicIds,
-      clinicRecords: masterDb.clinicRecords
+      clinicRecords: masterDb.clinicRecords,
+      clinicSettings: masterDb.clinicSettings
     }));
     return;
   }
@@ -277,6 +292,16 @@ const requestHandler = (req, res) => {
           }
         }
 
+        // 4. Fusionar Configuraciones de Consultorio (Logos, Cédulas, Membretes)
+        if (payload.clinicSettings && typeof payload.clinicSettings === 'object') {
+          if (!masterDb.clinicSettings) masterDb.clinicSettings = {};
+          for (const [cId, settings] of Object.entries(payload.clinicSettings)) {
+            if (settings && typeof settings === 'object' && !deletedSet.has(cId)) {
+              masterDb.clinicSettings[cId] = { ...(masterDb.clinicSettings[cId] || {}), ...settings };
+            }
+          }
+        }
+
         masterDb.deletedClinicIds = Array.from(deletedSet);
         saveDatabase();
 
@@ -290,7 +315,8 @@ const requestHandler = (req, res) => {
           clinics: masterDb.clinics,
           adminContact: masterDb.adminContact,
           deletedClinicIds: masterDb.deletedClinicIds,
-          clinicRecords: masterDb.clinicRecords
+          clinicRecords: masterDb.clinicRecords,
+          clinicSettings: masterDb.clinicSettings
         }));
       } catch (err) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
