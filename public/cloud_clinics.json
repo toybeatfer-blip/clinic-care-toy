@@ -31,24 +31,6 @@
       "lastLoginAt": "2026-09-04T01:49:53.191Z",
       "licenseStatus": "active",
       "licenseValidUntil": "Indefinida"
-    },
-    {
-      "id": "clinic_test_device_sync",
-      "clinicName": "Consultorio Pediatrico San Lucas",
-      "username": "pediatria_sanlucas",
-      "passwordPlain": "pediatria2026",
-      "doctorName": "Dr. Lucas Mendoza",
-      "prefix": "Dr.",
-      "cedulaGeneral": "88776655",
-      "especialidad": "Pediatría",
-      "telefono": "55 9876 5432",
-      "correo": "lucas@sanlucas.com",
-      "primaryColor": "sky",
-      "createdAt": "2026-09-04T02:15:17.953Z",
-      "updatedAt": "2026-09-04T02:15:17.955Z",
-      "lastLoginAt": "2026-09-04T02:15:17.955Z",
-      "licenseStatus": "active",
-      "licenseValidUntil": "2026-12-31"
     }
   ]
 }
