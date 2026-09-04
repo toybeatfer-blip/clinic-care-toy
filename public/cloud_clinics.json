@@ -1,6 +1,6 @@
 {
   "superAdmin": "Fernando01",
-  "updatedAt": "2026-09-04T04:54:23.562Z",
+  "updatedAt": "2026-09-04T05:15:39.069Z",
   "adminContact": {
     "adminName": "Fernando (Super Administrador)",
     "phoneWhatsApp": "55 1234 5678",
@@ -54,6 +54,105 @@
       "createdAt": "2026-09-04T03:33:19.904Z",
       "updatedAt": "2026-09-04T03:33:19.905Z",
       "lastLoginAt": "2026-09-04T03:33:19.905Z"
+    },
+    {
+      "id": "clinic_test_alberto_1788498939066",
+      "clinicName": "Centro Quirúrgico Los Pinos",
+      "doctorName": "Alberto Domínguez",
+      "prefix": "Dr.",
+      "cedulaGeneral": "55667788",
+      "cedulaEspecialidad": "CIR-9900",
+      "especialidad": "Cirugía General y Laparoscopía",
+      "universidad": "Universidad de Guadalajara",
+      "username": "dr.alberto",
+      "passwordPlain": "alberto2026",
+      "telefono": "33 1234 5678",
+      "correo": "dr.alberto@lospinos.com",
+      "direccion": "Av. Circunvalación 880",
+      "sucursal": "Torre Médica A",
+      "primaryColor": "indigo",
+      "licenseStatus": "active",
+      "licenseValidUntil": "2026-12-31",
+      "createdAt": "2026-09-04T05:15:39.066Z",
+      "updatedAt": "2026-09-04T05:15:39.068Z",
+      "lastLoginAt": "2026-09-04T05:15:39.068Z"
     }
-  ]
+  ],
+  "deletedClinicIds": [],
+  "clinicRecords": {
+    "clinic_test_alberto_1788498939066": [
+      {
+        "id": "rec_patient_1788498939068",
+        "folio": "F-2026-001",
+        "patient": {
+          "nombreCompleto": "Juan Pérez Morales",
+          "curp": "PEMJ800101HDFRRN01",
+          "edad": "45",
+          "sexo": "Masculino",
+          "fechaNacimiento": "1980-01-01",
+          "ocupacion": "Ingeniero de Sistemas",
+          "telefono": "55 1122 3344",
+          "correo": "juan.perez@example.com",
+          "direccion": "Calle Roble 45, Col. Bosques"
+        },
+        "historyCheckup": {
+          "antecedentesHeredofamiliares": "Padre diabético, madre hipertensa controlada.",
+          "antecedentesPersonalesNoPatologicos": "Tabaquismo negativo, actividad física moderada.",
+          "antecedentesPersonalesPatologicos": "Apendicectomía a los 20 años.",
+          "antecedentesGinecoObstetricos": "",
+          "motivoConsulta": "Dolor abdominal agudo en fosa ilíaca derecha de 12h de evolución.",
+          "signosVitales": {
+            "temp": "37.8",
+            "taSistolica": "125",
+            "taDiastolica": "82",
+            "fc": "86",
+            "fr": "18",
+            "satO2": "98",
+            "peso": "78.5",
+            "talla": "1.75",
+            "imc": "25.6",
+            "glucosa": "95"
+          },
+          "diagnosticoCie10": "K35.8 - Otras apendicitis agudas y las no especificadas",
+          "indicacionTerapeutica": "Ayuno, canalización periférica y valoración quirúrgica urgente.",
+          "prescripcion": [
+            {
+              "medicamento": "Ceftriaxona",
+              "dosis": "1 g",
+              "via": "IV",
+              "frecuencia": "Cada 12 horas",
+              "duracion": "3 días",
+              "indicaciones": "Iniciar prequirúrgico"
+            },
+            {
+              "medicamento": "Ketorolaco",
+              "dosis": "30 mg",
+              "via": "IV",
+              "frecuencia": "Cada 8 horas",
+              "duracion": "Dosis única",
+              "indicaciones": "Para manejo del dolor agudo"
+            }
+          ]
+        },
+        "updatedAt": "2026-09-04T05:15:39.068Z"
+      }
+    ]
+  },
+  "clinicSettings": {
+    "clinic_test_alberto_1788498939066": {
+      "nombreClinica": "Centro Quirúrgico Los Pinos",
+      "doctorName": "Alberto Domínguez",
+      "prefix": "Dr.",
+      "cedulaGeneral": "55667788",
+      "cedulaEspecialidad": "CIR-9900",
+      "especialidad": "Cirugía General y Laparoscopía",
+      "universidad": "Universidad de Guadalajara",
+      "telefonoContacto": "33 1234 5678",
+      "correoContacto": "dr.alberto@lospinos.com",
+      "direccionClinica": "Av. Circunvalación 880",
+      "sucursal": "Torre Médica A",
+      "logoUrl": "",
+      "primaryColor": "indigo"
+    }
+  }
 }
