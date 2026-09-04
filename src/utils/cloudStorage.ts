@@ -85,13 +85,16 @@ export function pullClinicsFromCloud(): Promise<{ success: boolean; count: numbe
         clearTimeout(timeoutId);
 
         if (apiRes.ok) {
-          const apiData = await apiRes.json();
-          if (apiData && apiData.success) {
-            if (Array.isArray(apiData.clinics)) remoteList = apiData.clinics;
-            if (apiData.adminContact && typeof apiData.adminContact === 'object') remoteAdminContact = apiData.adminContact;
-            if (apiData.clinicRecords && typeof apiData.clinicRecords === 'object') remoteClinicRecords = apiData.clinicRecords;
-            if (Array.isArray(apiData.deletedClinicIds)) remoteDeletedIds = apiData.deletedClinicIds;
-            fetchedOk = true;
+          const contentType = apiRes.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            const apiData = await apiRes.json();
+            if (apiData && apiData.success) {
+              if (Array.isArray(apiData.clinics)) remoteList = apiData.clinics;
+              if (apiData.adminContact && typeof apiData.adminContact === 'object') remoteAdminContact = apiData.adminContact;
+              if (apiData.clinicRecords && typeof apiData.clinicRecords === 'object') remoteClinicRecords = apiData.clinicRecords;
+              if (Array.isArray(apiData.deletedClinicIds)) remoteDeletedIds = apiData.deletedClinicIds;
+              fetchedOk = true;
+            }
           }
         }
       } catch (apiErr) {
@@ -342,20 +345,23 @@ export function pushClinicsToCloud(clinicsToUpload?: ClinicAccount[], maxRetries
         clearTimeout(timeoutId);
 
         if (res.ok) {
-          const resData = await res.json();
-          if (resData && resData.success) {
-            localStorage.setItem(CLOUD_CACHE_TIMESTAMP_KEY, new Date().toISOString());
-            if (Array.isArray(resData.clinics)) {
-              saveAllClinics(resData.clinics, false);
-              resData.clinics.forEach((c: ClinicAccount) => initClinicDatabase(c));
+          const contentType = res.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            const resData = await res.json();
+            if (resData && resData.success) {
+              localStorage.setItem(CLOUD_CACHE_TIMESTAMP_KEY, new Date().toISOString());
+              if (Array.isArray(resData.clinics)) {
+                saveAllClinics(resData.clinics, false);
+                resData.clinics.forEach((c: ClinicAccount) => initClinicDatabase(c));
+              }
+              if (resData.adminContact) {
+                saveAdminContactInfo(resData.adminContact, false);
+              }
+              if (resData.clinicRecords) {
+                saveAllClinicRecordsMap(resData.clinicRecords);
+              }
+              return { success: true, count: resData.clinics?.length || cleanList.length };
             }
-            if (resData.adminContact) {
-              saveAdminContactInfo(resData.adminContact, false);
-            }
-            if (resData.clinicRecords) {
-              saveAllClinicRecordsMap(resData.clinicRecords);
-            }
-            return { success: true, count: resData.clinics?.length || cleanList.length };
           }
         }
       } catch (apiErr) {
@@ -392,6 +398,22 @@ export function pushClinicsToCloud(clinicsToUpload?: ClinicAccount[], maxRetries
               }
             }
           } catch (e) {}
+
+          // Si falta el SHA por cuestiones de caché, obtenerlo directamente
+          if (!currentSha) {
+            try {
+              const directShaRes = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}?ref=main&cb=${Date.now()}`, {
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Accept': 'application/vnd.github.v3+json'
+                }
+              });
+              if (directShaRes.ok) {
+                const d = await directShaRes.json();
+                if (d && d.sha) currentSha = d.sha;
+              }
+            } catch (e) {}
+          }
 
           // 2. FUSIÓN DISTRIBUIDA: Combinar remotos con locales para que ningún dispositivo pise a otro
           const mergedUploadMap = new Map<string, ClinicAccount>();
