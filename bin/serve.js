@@ -253,12 +253,30 @@ const requestHandler = (req, res) => {
           masterDb.clinics = Array.from(clinicMap.values());
         }
 
-        // 2. Fusionar Datos de Contacto de Super Administrador
+        // 2. Fusionar Datos de Contacto de Super Administrador con Blindaje contra valores por defecto
         if (payload.adminContact && typeof payload.adminContact === 'object') {
-          const incomingContactTime = safeDateParse(payload.adminContact.updatedAt);
-          const currentContactTime = safeDateParse(masterDb.adminContact.updatedAt);
-          if (incomingContactTime >= currentContactTime) {
-            masterDb.adminContact = { ...masterDb.adminContact, ...payload.adminContact };
+          const incoming = payload.adminContact;
+          const current = masterDb.adminContact || {};
+
+          const isDef = (c) => {
+            const isDefPhone = !c.phoneWhatsApp || c.phoneWhatsApp.trim() === '55 1234 5678';
+            const isDefTime = !c.updatedAt || c.updatedAt === '2026-01-01T00:00:00.000Z';
+            return isDefPhone && isDefTime;
+          };
+
+          const incomingDef = isDef(incoming);
+          const currentDef = isDef(current);
+
+          if (currentDef && !incomingDef) {
+            masterDb.adminContact = { ...current, ...incoming };
+          } else if (!currentDef && incomingDef) {
+            // No sobrescribir datos personalizados con datos por defecto
+          } else {
+            const incomingContactTime = safeDateParse(incoming.updatedAt);
+            const currentContactTime = safeDateParse(current.updatedAt);
+            if (incomingContactTime >= currentContactTime) {
+              masterDb.adminContact = { ...current, ...incoming };
+            }
           }
         }
 
