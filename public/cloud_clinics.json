@@ -1,6 +1,6 @@
 {
   "superAdmin": "Fernando01",
-  "updatedAt": "2026-09-04T03:44:45.539Z",
+  "updatedAt": "2026-09-04T04:54:22.535Z",
   "adminContact": {
     "adminName": "Fernando (Super Administrador)",
     "phoneWhatsApp": "55 1234 5678",
@@ -54,6 +54,28 @@
       "createdAt": "2026-09-04T03:33:19.904Z",
       "updatedAt": "2026-09-04T03:33:19.905Z",
       "lastLoginAt": "2026-09-04T03:33:19.905Z"
+    },
+    {
+      "id": "clinic_e2e_1788497662523",
+      "clinicName": "Clínica Pediátrica Santa Fe",
+      "doctorName": "Dr. Alejandro Morales",
+      "prefix": "Dr.",
+      "cedulaGeneral": "77665544",
+      "cedulaEspecialidad": "PED-9988",
+      "especialidad": "Pediatría Especializada",
+      "universidad": "Universidad La Salle",
+      "username": "dr.morales",
+      "passwordPlain": "morales2026",
+      "telefono": "55 1122 3344",
+      "correo": "dr.morales@santafe.com",
+      "direccion": "Av. Vasco de Quiroga 2000",
+      "sucursal": "Sucursal Poniente",
+      "primaryColor": "emerald",
+      "licenseStatus": "active",
+      "licenseValidUntil": "2026-12-31",
+      "createdAt": "2026-09-04T04:54:22.523Z",
+      "updatedAt": "2026-09-04T04:54:22.535Z",
+      "lastLoginAt": "2026-09-04T04:54:22.535Z"
     }
   ]
 }
