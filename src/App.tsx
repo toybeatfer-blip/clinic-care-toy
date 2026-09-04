@@ -143,19 +143,27 @@ export const App: React.FC = () => {
     }
   }, [session?.clinicId]);
 
-  // Sincronización continua en la nube cada 10s y al enfocar pestaña para consultorios
+  // Sincronización continua en la nube cada 4s y al enfocar pestaña para consultorios
   useEffect(() => {
     if (session?.type === 'clinic' && session.clinicId) {
       const doSync = () => {
         pullClinicsFromCloud().then(res => {
           if (res.success && session.clinicId) {
             setSavedRecords(getClinicRecords(session.clinicId));
+            setDoctorSettings(getClinicSettings(session.clinicId));
+            const all = getAllClinics();
+            const fresh = all.find(c => c.id === session.clinicId);
+            if (fresh && (fresh.licenseStatus !== session.clinicAccount?.licenseStatus || fresh.licenseValidUntil !== session.clinicAccount?.licenseValidUntil)) {
+              const updatedSession = { ...session, clinicAccount: fresh };
+              setSession(updatedSession);
+              saveSession(updatedSession);
+            }
           }
         }).catch(() => {});
       };
 
       doSync();
-      const interval = setInterval(doSync, 10000);
+      const interval = setInterval(doSync, 4000);
       window.addEventListener('focus', doSync);
 
       return () => {
@@ -163,7 +171,7 @@ export const App: React.FC = () => {
         window.removeEventListener('focus', doSync);
       };
     }
-  }, [session?.clinicId]);
+  }, [session?.clinicId, session?.clinicAccount?.licenseStatus, session?.clinicAccount?.licenseValidUntil]);
 
   // Respaldo de emergencia: Si localStorage no tiene expedientes pero IndexedDB sí los tiene, restaurarlos automáticamente
   useEffect(() => {
