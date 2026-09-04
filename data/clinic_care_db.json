@@ -1,0 +1,38 @@
+{
+  "superAdmin": "Fernando01",
+  "updatedAt": "2026-09-04T03:08:15.462Z",
+  "adminContact": {
+    "adminName": "Fernando (Super Administrador)",
+    "phoneWhatsApp": "55 1234 5678",
+    "email": "toybeatfer@gmail.com",
+    "helpMessage": "Para renovar tu licencia mensual o resolver dudas sobre tu cuenta de consultorio, comunícate directamente con el administrador del sistema.",
+    "updatedAt": "2026-01-01T00:00:00.000Z"
+  },
+  "clinics": [
+    {
+      "id": "clinic_seed_central_01",
+      "clinicName": "Clínica Médica Familiar y Especialidades",
+      "username": "consultorio1",
+      "passwordPlain": "1234",
+      "doctorName": "Fernando Beltrán",
+      "prefix": "Dr.",
+      "cedulaGeneral": "12345678",
+      "cedulaEspecialidad": "ESP-987654",
+      "especialidad": "Medicina General y Familiar",
+      "universidad": "UNAM / Facultad de Medicina",
+      "telefono": "55 1234 5678",
+      "correo": "toybeatfer@gmail.com",
+      "direccion": "Av. Insurgentes Sur 1234, Ciudad de México",
+      "sucursal": "Matriz Principal",
+      "logoUrl": "",
+      "primaryColor": "sky",
+      "createdAt": "2026-01-01T00:00:00.000Z",
+      "updatedAt": "2026-09-04T03:08:15.463Z",
+      "lastLoginAt": "2026-09-04T03:08:15.463Z",
+      "licenseStatus": "active",
+      "licenseValidUntil": "Indefinida"
+    }
+  ],
+  "deletedClinicIds": [],
+  "clinicRecords": {}
+}

@@ -1,99 +1,100 @@
-# 🐾 VetCare Pro — Software de Gestión Clínica Veterinaria & Portal de Tutores
+# 🩺 CLINIC CARE TOY
 
-**VetCare Pro** es una plataforma integral SaaS (Software as a Service) diseñada para la administración integral de clínicas, hospitales y consultorios veterinarios, venta en mostrador (Pet Shop & Farmacia), control de turnos de caja y carnet digital interactivo para tutores de mascotas.
-
----
-
-## 🚀 Características Principales
-
-### 🩺 1. Gestión Clínica & Expedientes Médicos
-- **Consultas SOAP Digitales:** Diagnóstico, plan de tratamiento, signos vitales y evolución clínica.
-- **Recetas Médicas Profesionales:** Generación automática con membrete, cédula del médico director y envío directo por WhatsApp.
-- **Fichas de Pacientes:** Historial completo por especie (caninos, felinos, aves, roedores, exóticos), peso y microchip.
-- **Módulo de Alta Médica:** Resumen de egreso post-consulta o post-quirúrgico.
-
-### 💉 2. Carnet de Vacunación & Avisos Automatizados
-- Carnet digital de vacunas y desparasitaciones con semáforo de estado (Al día, Próxima, Vencida).
-- Alertas de dosis próximas y recordatorios 1-clic por WhatsApp.
-
-### 🛍️ 3. Pet Shop, Alimentos, Accesorios & Múltiples Almacenes
-- Catálogo de productos con categoría, presentación, costo de adquisición y precio de venta con cálculo automático de margen de ganancia.
-- Control de inventario en **5 Almacenes/Ubicaciones** (Tienda mostrador, Bodega central, Consultorios, etc.).
-- Transferencias de stock entre almacenes en tiempo real.
-
-### 💰 4. Control de Turnos, Arqueo & Corte Diario de Caja
-- **Apertura de Turno:** Fondo inicial con sugerencias rápidas ($300, $500, $1,000, $1,500, $2,000 MXN).
-- **POS Unificado:** Cobro conjunto de productos de tienda y servicios médicos (Consultas generales, urgencias 24/7 y vacunas por paciente).
-- **Cierre de Turno & Arqueo:** Registro de efectivo físico contado, cálculo de sobrante/faltante e impresión de Ticket de Corte Z térmico (58mm/80mm) y tamaño carta.
-
-### 📱 5. Portal para Tutores & App Móvil Android
-- Carnet digital de salud y pasaporte de vacunación accesible vía código QR.
-- Agendamiento de citas médicas y botón SOS de emergencias 24h.
-
-### ⚡ 6. Consola Master de Administración (Super Usuario)
-- Control centralizado de clínicas arrendatarias (Tenants).
-- Generador de licencias y números de serie mensuales y anuales.
-- Bloqueo y activación de planes con periodo de gracia configurable.
+> **Copiloto Operativo y Redactor Clínico Inteligente para el Sistema Administrador de Consultorios (SAC)**  
+> *Cumplimiento estricto con la NOM-004-SSA3-2012 y lineamientos de auditoría médica institucional.*
 
 ---
 
-## 🛠️ Instalación y Puesta en Marcha
+## 🌟 Características Principales
 
-### Requisitos Previos
-- **Node.js** v18 o superior
-- **npm** v9 o superior
+1. **Módulos Clínicos para SAC (Listos para Copiar y Pegar):**
+   - **Módulo 1: Alta y Ficha de Identificación:** Prevención de duplicidad de expedientes, desglose de código postal y autocompletado de antecedentes.
+   - **Módulo 2: Historia Clínica General / Checkup:** Padecimiento actual cronológico, interrogatorio por sistemas con terminación normativa obligatoria (`"...resto del interrogatorio negado."`), somatometría con SpO2 y cálculo de IMC automático, validación estricta de estatura en metros, catálogo **CIE-10** interactivo y prescripción institucional (**ALMUS** / Genéricos).
+   - **Módulo 3: Nota de Evolución y Seguimiento:** Revaloración del cuadro clínico, exploración física dirigida y ajuste terapéutico.
+   - **Módulo 4: Procedimientos y Consentimientos Informados:** Registro de inyecciones intramusculares (fármaco, dosis, presentación y zona), curaciones, retiro de puntos y leyendas oficiales de testigos.
 
-### 1. Clonar el Repositorio
+2. **✨ Procesador de Dictado y Notas en Bruto (IA):**
+   - Pega notas médicas libres o dictados rápidos y el sistema las estructura automáticamente en los campos requeridos por la NOM-004.
+
+3. **🛡️ Validador de Auditoría NOM-004 en Tiempo Real:**
+   - Detección activa de siglas prohibidas (`NP`, `SDP`, `NA`, `S/S`, `Tx`, `Dx`, etc.) con botón de **"Corregir Todo Automáticamente"** en 1 clic.
+
+4. **⚙️ Personalización e Identidad Médica:**
+   - Configura el nombre del médico, cédula profesional general y de especialidad, universidad, teléfono y correo.
+   - Configura nombre de la clínica, sucursal y dirección completa.
+   - Carga de **logotipo institucional** personalizado (PNG, JPG, SVG).
+   - Paleta de colores personalizable (Azul SAC, Verde Médico, Azul ALMUS, Índigo, Morado, Turquesa, Carmesí).
+
+5. **📄 Receta y Nota Médica Imprimible (PDF):**
+   - Generación de nota médica y receta oficial con membrete profesional, logotipo, datos del médico, cédulas, dirección y líneas de firma.
+
+6. **🔑 Copiloto Operativo del SAC:**
+   - Generador de contraseñas de Windows de consultorio (`X[3 dígitos].[3 dígitos]`).
+   - Guía de contingencia para tickets no encontrados y reporte en HELIX.
+   - Flujo de asistencia y checado biométrico ADS (turno corrido vs mixto).
+
+---
+
+## 🚀 Despliegue Rápido en la Nube (Gratis)
+
+Este proyecto está construido con **React + Vite + Tailwind CSS**, por lo que es 100% estático, ultra rápido y compatible con cualquier servicio de hosting en la nube.
+
+### Opción A: Despliegue en Vercel (Recomendado)
+1. Sube este repositorio a tu cuenta de **GitHub**.
+2. Ingresa a [vercel.com](https://vercel.com) e inicia sesión con GitHub.
+3. Haz clic en **"Add New Project"** y selecciona este repositorio.
+4. Vercel detectará automáticamente la configuración de Vite. Haz clic en **"Deploy"**.
+5. ¡Listo! Tendrás un enlace público `https://tu-proyecto.vercel.app` para acceder desde cualquier dispositivo o consultorio.
+
+### Opción B: Despliegue en Netlify
+1. Ingresa a [netlify.com](https://netlify.com).
+2. Selecciona **"Add new site" -> "Import an existing project" -> "GitHub"**.
+3. Selecciona el repositorio y presiona **"Deploy site"**.
+
+---
+
+## 💻 Comandos para Subir a GitHub
+
+Abre tu terminal en la carpeta del proyecto y ejecuta los siguientes comandos:
+
 ```bash
-git clone https://github.com/TU_USUARIO/TU_REPOSITORIO.git
-cd PROYECTO-YABET
+# 1. Verificar archivos preparados
+git status
+
+# 2. Agregar todos los archivos al commit
+git add .
+
+# 3. Crear el commit de lanzamiento
+git commit -m "feat: Lanzamiento inicial de CLINIC CARE TOY para SAC y NOM-004"
+
+# 4. Conectar con tu repositorio remoto de GitHub (sustituye TU_USUARIO y TU_REPOSITORIO)
+git remote add origin https://github.com/TU_USUARIO/TU_REPOSITORIO.git
+
+# 5. Subir a la rama principal
+git branch -M main
+git push -u origin main
 ```
 
-### 2. Instalar Dependencias
+---
+
+## 🛠️ Ejecución Local
+
+Para ejecutar el proyecto en tu computadora:
+
 ```bash
+# Instalar dependencias
 npm install
-```
 
-### 3. Configurar Variables de Entorno (Opcional)
-Crea un archivo `.env` en la raíz del proyecto si deseas habilitar la IA de VetCopilot:
-```env
-PORT=3000
-GEMINI_API_KEY=tu_api_key_de_gemini
-```
+# Iniciar servidor de desarrollo
+npm run dev
 
-### 4. Compilar para Producción
-```bash
+# Compilar para producción
 npm run build
 ```
 
-### 5. Iniciar el Servidor
-```bash
-npm start
-```
-El sistema estará disponible en: **`http://localhost:3000`**
-
 ---
 
-## 🔑 Credenciales de Acceso Predeterminadas
-
-| Rol | Usuario | Contraseña | Descripción |
-|---|---|---|---|
-| **⚡ Super Administrador** | `superadmin` | `master2026` | Dueño del software, Consola Master y gestión de clínicas |
-| **👑 Administrador Clínica** | `admin` | `admin123` | Control total de la clínica, finanzas y parámetros |
-| **👤 Encargado / Recepción** | `encargado` | `encargado123` | Modo operativo: Citas, consultas, Pet Shop y caja |
-
----
-
-## ☁️ Despliegue en la Nube (Render, Railway, Heroku)
-
-1. Conecta este repositorio a tu cuenta de **Render** o proveedor SaaS favorito.
-2. Configuración en Render:
-   - **Environment:** `Node`
-   - **Build Command:** `npm install && npm run build`
-   - **Start Command:** `node server.js`
-   - **Port:** `3000` (o `$PORT`)
-3. VetCare Pro se desplegará de forma automatizada y con soporte SSL/HTTPS nativo.
-
----
-
-© 2026 VetCare Pro — Plataforma SaaS para Clínicas Veterinarias. Todos los derechos reservados.
+## 📜 Normativa y Auditoría
+- **NOM-004-SSA3-2012:** Del expediente clínico.
+- **NOM-024-SSA3-2012:** Sistemas de información de registro electrónico para la salud.
+- **SAC (Sistema Administrador de Consultorios):** Reglas operativas y de auditoría interna de consultorios de primer contacto.
