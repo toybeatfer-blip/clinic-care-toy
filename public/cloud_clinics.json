@@ -1,12 +1,12 @@
 {
   "superAdmin": "Fernando01",
-  "updatedAt": "2026-09-04T01:25:20.853Z",
+  "updatedAt": "2026-09-04T01:49:53.189Z",
   "adminContact": {
     "adminName": "Fernando (Super Administrador)",
     "phoneWhatsApp": "55 1234 5678",
     "email": "toybeatfer@gmail.com",
     "helpMessage": "Para renovar tu licencia mensual o resolver dudas sobre tu cuenta de consultorio, comunícate directamente con el administrador del sistema.",
-    "updatedAt": "2026-09-03T12:00:00.000Z"
+    "updatedAt": "2026-09-04T01:49:53.191Z"
   },
   "clinics": [
     {
@@ -27,24 +27,10 @@
       "logoUrl": "",
       "primaryColor": "sky",
       "createdAt": "2026-01-01T00:00:00.000Z",
-      "updatedAt": "2026-09-03T12:00:00.000Z",
-      "lastLoginAt": "2026-09-03T12:00:00.000Z",
+      "updatedAt": "2026-09-04T01:49:53.191Z",
+      "lastLoginAt": "2026-09-04T01:49:53.191Z",
       "licenseStatus": "active",
       "licenseValidUntil": "Indefinida"
-    },
-    {
-      "id": "clinic_test_1788485120854",
-      "clinicName": "Consultorio Prueba Sync",
-      "username": "consultorioprueba",
-      "passwordPlain": "1234",
-      "doctorName": "Dr. Prueba",
-      "prefix": "Dr.",
-      "cedulaGeneral": "99999999",
-      "especialidad": "Medicina General",
-      "licenseStatus": "active",
-      "licenseValidUntil": "2026-10-01",
-      "createdAt": "2026-09-04T01:25:20.854Z",
-      "updatedAt": "2026-09-04T01:25:20.854Z"
     }
   ]
 }
