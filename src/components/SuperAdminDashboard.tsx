@@ -934,7 +934,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onClinicCreated={(newClinic) => {
-          refreshClinics();
+          setClinics(getAllClinics());
         }}
       />
 

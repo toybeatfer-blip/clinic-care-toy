@@ -449,7 +449,7 @@ export function saveAllClinics(clinics: ClinicAccount[], syncToCloud: boolean = 
     }
 
     if (syncToCloud) {
-      setTimeout(() => pushClinicsToCloud(cleanList).catch(() => {}), 50);
+      pushClinicsToCloud(cleanList).catch(() => {});
     }
   } catch (e) {
     console.error('Error saving clinics', e);

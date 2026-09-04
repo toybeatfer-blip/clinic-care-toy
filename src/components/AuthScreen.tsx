@@ -19,7 +19,7 @@ import {
   Clock
 } from 'lucide-react';
 import { authenticateUser, registerClinic, getAdminContactInfo } from '../utils/authStorage';
-import { pullClinicsFromCloud } from '../utils/cloudStorage';
+import { pullClinicsFromCloud, pushClinicsToCloud } from '../utils/cloudStorage';
 import { SessionUser } from '../types';
 import { SuspendedLicenseNoticeModal } from './SuspendedLicenseNoticeModal';
 import { CREATOR_LOGO_BASE64 } from '../constants/creatorBranding';
@@ -82,8 +82,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
 
     let result = authenticateUser(loginUser, loginPass);
 
-    // Si no se encuentra localmente, buscar en la nube en tiempo real (por si se registró en otro equipo)
-    if (!result.success && !result.isLicenseBlocked && loginUser.trim().toLowerCase() !== 'fernando01') {
+    // Si no se encuentra localmente o no tuvo éxito inicial, jalar de la nube en tiempo real
+    if (!result.success && !result.isLicenseBlocked) {
       try {
         await pullClinicsFromCloud();
         result = authenticateUser(loginUser, loginPass);
@@ -104,7 +104,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     }
   };
 
-  const handleRegisterSubmit = (e: React.FormEvent) => {
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setRegError('');
 
@@ -117,6 +117,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
       setRegError('La contraseña debe tener al menos 4 caracteres.');
       return;
     }
+
+    setIsSubmitting(true);
 
     const regResult = registerClinic({
       clinicName: regClinicName.trim(),
@@ -136,13 +138,25 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
 
     if (regResult.success && regResult.clinic) {
       setRegSuccess(true);
+      
+      // Sincronizar y blindar inmediatamente en la nube central de GitHub antes de redirigir
+      try {
+        await pushClinicsToCloud();
+      } catch (err) {
+        console.warn('Registro completado con respaldo local, subida diferida:', err);
+      }
+
       const auth = authenticateUser(regResult.clinic.username, regResult.clinic.passwordPlain);
       if (auth.success && auth.session) {
         setTimeout(() => {
+          setIsSubmitting(false);
           onLoginSuccess(auth.session!);
-        }, 800);
+        }, 500);
+      } else {
+        setIsSubmitting(false);
       }
     } else {
+      setIsSubmitting(false);
       setRegError(regResult.error || 'Error al registrar el consultorio.');
     }
   };
@@ -492,10 +506,20 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
 
             <button
               type="submit"
-              className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2 mt-2"
+              disabled={isSubmitting}
+              className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-bold text-sm shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-2 mt-2"
             >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Registrar Consultorio (Licencia de 1 Mes)</span>
+              {isSubmitting ? (
+                <>
+                  <Clock className="w-4 h-4 animate-spin" />
+                  <span>Blindando y Sincronizando en la Nube...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Registrar Consultorio (Licencia de 1 Mes)</span>
+                </>
+              )}
             </button>
           </form>
         )}

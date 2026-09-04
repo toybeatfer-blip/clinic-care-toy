@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { X, Building2, User, KeyRound, ShieldCheck, Phone, Mail, MapPin, Check, Sparkles } from 'lucide-react';
+import { X, Building2, User, KeyRound, ShieldCheck, Phone, Mail, MapPin, Check, Sparkles, RefreshCw } from 'lucide-react';
 import { ClinicAccount } from '../types';
 import { registerClinic } from '../utils/authStorage';
+import { pushClinicsToCloud } from '../utils/cloudStorage';
 
 interface CreateClinicModalProps {
   isOpen: boolean;
@@ -27,11 +28,12 @@ export const CreateClinicModal: React.FC<CreateClinicModalProps> = ({
   const [correo, setCorreo] = useState('');
   const [direccion, setDireccion] = useState('');
   const [licenseMonths, setLicenseMonths] = useState<number>(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -44,6 +46,8 @@ export const CreateClinicModal: React.FC<CreateClinicModalProps> = ({
     const expDate = new Date();
     expDate.setDate(expDate.getDate() + (licenseMonths * 30));
     const validUntilStr = expDate.toISOString().slice(0, 10);
+
+    setIsSubmitting(true);
 
     const result = registerClinic({
       clinicName: clinicName.trim(),
@@ -64,6 +68,12 @@ export const CreateClinicModal: React.FC<CreateClinicModalProps> = ({
     });
 
     if (result.success && result.clinic) {
+      try {
+        await pushClinicsToCloud();
+      } catch (err) {
+        console.warn('Consultorio guardado localmente, sincronización en progreso:', err);
+      }
+      setIsSubmitting(false);
       onClinicCreated(result.clinic);
       // Limpiar formulario y cerrar
       setClinicName('');
@@ -76,6 +86,7 @@ export const CreateClinicModal: React.FC<CreateClinicModalProps> = ({
       setDireccion('');
       onClose();
     } else {
+      setIsSubmitting(false);
       setError(result.error || 'No se pudo crear el consultorio.');
     }
   };
@@ -290,10 +301,20 @@ export const CreateClinicModal: React.FC<CreateClinicModalProps> = ({
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold shadow-lg shadow-sky-600/30 flex items-center gap-1.5 transition-all"
+              disabled={isSubmitting}
+              className="px-5 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold shadow-lg shadow-sky-600/30 flex items-center gap-1.5 transition-all"
             >
-              <Check className="w-4 h-4" />
-              <span>Crear Consultorio</span>
+              {isSubmitting ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Blindando en la Nube...</span>
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4" />
+                  <span>Crear Consultorio</span>
+                </>
+              )}
             </button>
           </div>
 
