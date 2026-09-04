@@ -172,7 +172,7 @@ export async function idbGetClinicSettings(clinicId: string): Promise<DoctorSett
 }
 
 // 4. Guardar Snapshot de Respaldo Maestro en Bóveda
-export async function idbSaveSnapshot(payload: { clinics: ClinicAccount[]; adminContact: any; clinicRecords?: any }): Promise<void> {
+export async function idbSaveSnapshot(payload: { clinics: ClinicAccount[]; adminContact: any; clinicRecords?: any; clinicSettings?: any }): Promise<void> {
   try {
     const db = await getIDB();
     const tx = db.transaction('vault_snapshots', 'readwrite');
