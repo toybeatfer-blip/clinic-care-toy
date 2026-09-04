@@ -3,32 +3,29 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// 1. Determinar puerto: de process.env.PORT, o argumentos de CLI (-p, -l, etc.)
-let port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+// 1. Determinar puertos: process.env.PORT, argumentos de CLI (-p, -l, etc.) y 3000
+const portsToListen = new Set();
 const args = process.argv.slice(2);
+
+if (process.env.PORT) {
+  const p = parseInt(process.env.PORT, 10);
+  if (!isNaN(p) && p > 0) portsToListen.add(p);
+}
 
 for (let i = 0; i < args.length; i++) {
   const arg = args[i];
   if ((arg === '-p' || arg === '-l' || arg === '--port' || arg === '--listen') && args[i + 1]) {
-    const val = args[i + 1];
-    const match = val.match(/(\d+)$/);
+    const match = args[i + 1].match(/(\d+)$/);
     if (match) {
-      const parsed = parseInt(match[1], 10);
-      if (!isNaN(parsed) && parsed > 0) {
-        port = parsed;
-      }
+      const p = parseInt(match[1], 10);
+      if (!isNaN(p) && p > 0) portsToListen.add(p);
     }
   }
 }
 
-if (isNaN(port) || port <= 0) {
-  port = 3000;
-}
+// Asegurar también puerto 3000 por si Render o cualquier proxy lo consulta
+portsToListen.add(3000);
 
 // 2. Determinar directorio a servir (por defecto dist)
 let targetDir = path.resolve(process.cwd(), 'dist');
@@ -43,7 +40,7 @@ for (let i = 0; i < args.length; i++) {
   }
 }
 
-// MIME types
+// MIME types comunes
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'application/javascript; charset=utf-8',
@@ -63,7 +60,7 @@ const MIME_TYPES = {
   '.txt': 'text/plain; charset=utf-8'
 };
 
-const server = http.createServer((req, res) => {
+const requestHandler = (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
 
@@ -111,9 +108,18 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': contentType });
     res.end(data);
   });
-});
+};
 
-server.listen(port, '0.0.0.0', () => {
-  console.log('==> Clinic Care Toy listening on port ' + port + ' (0.0.0.0)');
-  console.log('==> Serving directory: ' + targetDir);
-});
+for (const port of portsToListen) {
+  try {
+    const srv = http.createServer(requestHandler);
+    srv.listen(port, '0.0.0.0', () => {
+      console.log('==> Clinic Care Toy listening on port ' + port + ' (0.0.0.0)');
+    });
+    srv.on('error', (err) => {
+      // Ignorar si el puerto ya está en uso
+    });
+  } catch (e) {}
+}
+
+console.log('==> Serving directory: ' + targetDir);
