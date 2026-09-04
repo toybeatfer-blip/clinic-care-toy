@@ -1,6 +1,6 @@
 {
   "superAdmin": "Fernando01",
-  "updatedAt": "2026-09-04T05:15:40.256Z",
+  "updatedAt": "2026-09-04T23:32:41.191Z",
   "adminContact": {
     "adminName": "Fernando (Super Administrador)",
     "phoneWhatsApp": "55 1234 5678",
@@ -10,53 +10,180 @@
   },
   "clinics": [
     {
-      "id": "clinic_seed_central_01",
-      "clinicName": "Clínica Médica Familiar y Especialidades",
-      "username": "consultorio1",
-      "passwordPlain": "1234",
-      "doctorName": "Fernando Beltrán",
-      "prefix": "Dr.",
-      "cedulaGeneral": "12345678",
-      "cedulaEspecialidad": "ESP-987654",
-      "especialidad": "Medicina General y Familiar",
-      "universidad": "UNAM / Facultad de Medicina",
-      "telefono": "55 1234 5678",
-      "correo": "toybeatfer@gmail.com",
-      "direccion": "Av. Insurgentes Sur 1234, Ciudad de México",
-      "sucursal": "Matriz Principal",
-      "logoUrl": "",
-      "primaryColor": "sky",
-      "createdAt": "2026-01-01T00:00:00.000Z",
-      "updatedAt": "2026-09-04T03:08:15.463Z",
-      "lastLoginAt": "2026-09-04T03:08:15.463Z",
-      "licenseStatus": "active",
-      "licenseValidUntil": "Indefinida"
-    },
-    {
       "id": "clinic_dra_rivas_1788492799904",
       "clinicName": "Consultorio Médico",
+      "username": "dra.rivas",
+      "passwordPlain": "1234",
       "doctorName": "Médico Responsable",
       "prefix": "Dra.",
       "cedulaGeneral": "632782",
       "cedulaEspecialidad": "",
       "especialidad": "Medicina General",
       "universidad": "",
-      "username": "dra.rivas",
-      "passwordPlain": "1234",
       "telefono": "",
       "correo": "",
       "direccion": "",
       "sucursal": "",
       "logoUrl": "",
       "primaryColor": "sky",
-      "licenseStatus": "active",
-      "licenseValidUntil": "Indefinida",
       "createdAt": "2026-09-04T03:33:19.904Z",
       "updatedAt": "2026-09-04T03:33:19.905Z",
-      "lastLoginAt": "2026-09-04T03:33:19.905Z"
+      "lastLoginAt": "2026-09-04T03:33:19.905Z",
+      "licenseStatus": "active",
+      "licenseValidUntil": "Indefinida"
     }
   ],
-  "deletedClinicIds": [],
-  "clinicRecords": {},
-  "clinicSettings": {}
+  "deletedClinicIds": [
+    "dc2ac156-f3c3-4ee4-93e7-9b725e00e300",
+    "6b6ce601-ee73-4832-84f5-34282ed882b9",
+    "bdc71d7c-1130-4b7a-838f-ddd509745f7c",
+    "1e1f772e-5d2f-46f1-8f72-1dc1724ba8a0",
+    "b8010a5e-4524-4411-9fc6-48831a510d6d",
+    "clinic_seed_central_01",
+    "a1f85477-58fa-444c-85f4-a23f55448e50",
+    "30f8541a-fd2a-4980-8cf0-1742b654b5f2",
+    "940b3587-a27c-4a52-9d16-765a3d341cf1",
+    "241e3318-5acb-4f3c-a433-12e03858c87c",
+    "0c0235f1-6632-4ae0-8e1a-454dbe5667bd",
+    "0d55d493-aa36-4d8c-9d6c-354ada5c0d70"
+  ],
+  "clinicRecords": {
+    "clinic_dra_rivas_1788492799904": [
+      {
+        "id": "0c0235f1-6632-4ae0-8e1a-454dbe5667bd",
+        "ticketFolio": "",
+        "createdAt": "2026-09-04T04:59:52.192Z",
+        "updatedAt": "2026-09-04T20:01:01.527Z",
+        "activeModule": "modulo1",
+        "identification": {
+          "nombres": "",
+          "apellidoPaterno": "",
+          "apellidoMaterno": "",
+          "fechaNacimiento": "",
+          "edad": "",
+          "sexo": "Masculino",
+          "estadoNacimiento": "",
+          "nacionalidad": "Mexicana",
+          "curp": "",
+          "rfc": "",
+          "codigoPostal": "",
+          "estado": "",
+          "municipio": "",
+          "localidad": "",
+          "colonia": "",
+          "calle": "",
+          "numeroExt": "",
+          "numeroInt": "",
+          "telefonoCelular": "",
+          "correoElectronico": "",
+          "antecedentesHeredofamiliares": "",
+          "antecedentesPersonalesPatologicos": "",
+          "farmacodependencias": "",
+          "tabaquismo": "",
+          "alcoholismo": "",
+          "alergias": "",
+          "inmunizaciones": ""
+        },
+        "historyCheckup": {
+          "padecimientoActual": "",
+          "interrogatorioAparatos": "",
+          "vitalSigns": {
+            "temp": "",
+            "taSistolica": "",
+            "taDiastolica": "",
+            "taPediatricaBadge": "",
+            "fc": "",
+            "fr": "",
+            "satO2": "",
+            "peso": "",
+            "talla": "",
+            "imc": "",
+            "glucosa": ""
+          },
+          "physicalExam": {
+            "habitusExterior": "",
+            "cabezaCuello": "",
+            "torax": "",
+            "abdomen": "",
+            "miembros": "",
+            "genitales": "Diferido"
+          },
+          "estudiosDiagnostico": {
+            "laboratorios": "",
+            "rayosX": "",
+            "ultrasonido": "",
+            "tomografiaTac": "",
+            "otrosEstudios": "",
+            "interpretacionHallazgos": ""
+          },
+          "diagnosticoCie10": "",
+          "diagnosticoSecundario": "",
+          "pronostico": "",
+          "indicacionTerapeutica": "",
+          "prescripcion": []
+        },
+        "evolutionNote": {
+          "diagnosticoSeguimiento": "",
+          "evolucionCuadroClinico": "",
+          "exploracionFisicaDirigida": "",
+          "estudiosDiagnostico": {
+            "laboratorios": "",
+            "rayosX": "",
+            "ultrasonido": "",
+            "tomografiaTac": "",
+            "otrosEstudios": "",
+            "interpretacionHallazgos": ""
+          },
+          "diagnosticoActualizado": "",
+          "planTerapeutico": "",
+          "vitalSigns": {
+            "temp": "",
+            "taSistolica": "",
+            "taDiastolica": "",
+            "taPediatricaBadge": "",
+            "fc": "",
+            "fr": "",
+            "satO2": "",
+            "peso": "",
+            "talla": "",
+            "imc": "",
+            "glucosa": ""
+          }
+        },
+        "procedure": {
+          "procedimientoRealizado": "",
+          "tipoProcedimiento": "Inyección Intramuscular",
+          "observacionesObligatorias": "",
+          "farmacoAdministrado": "",
+          "presentacionDosis": "",
+          "zonaAplicacion": "",
+          "leyendaTestigos": "Se cuenta con firma de consentimiento informado por paciente y testigo"
+        },
+        "clinicalImages": [],
+        "appointmentInfo": {
+          "nextDate": "",
+          "nextTime": "",
+          "notes": ""
+        }
+      }
+    ]
+  },
+  "clinicSettings": {
+    "clinic_dra_rivas_1788492799904": {
+      "doctorName": "Médico Responsable",
+      "prefix": "Dra.",
+      "cedulaGeneral": "632782",
+      "cedulaEspecialidad": "",
+      "especialidad": "Medicina General",
+      "universidad": "",
+      "telefonoContacto": "",
+      "correoContacto": "",
+      "nombreClinica": "Consultorio Médico",
+      "sucursal": "",
+      "direccionClinica": "",
+      "telefonoClinica": "",
+      "logoUrl": "",
+      "primaryColor": "sky"
+    }
+  }
 }
