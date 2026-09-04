@@ -1,6 +1,6 @@
 {
   "superAdmin": "Fernando01",
-  "updatedAt": "2026-09-04T23:33:44.301Z",
+  "updatedAt": "2026-09-04T23:35:07.498Z",
   "adminContact": {
     "adminName": "Fernando (Super Administrador)",
     "phoneWhatsApp": "+52 474 1539891",
@@ -9,6 +9,28 @@
     "updatedAt": "2026-09-04T23:33:42.713Z"
   },
   "clinics": [
+    {
+      "clinicName": "Ndjdkdksl",
+      "sucursal": "Centro",
+      "doctorName": "Jose",
+      "prefix": "Dr.",
+      "cedulaGeneral": "618382",
+      "especialidad": "Medicina General",
+      "universidad": "",
+      "username": "Admin",
+      "passwordPlain": "Admin123",
+      "telefono": "",
+      "correo": "",
+      "direccion": "",
+      "primaryColor": "sky",
+      "licenseStatus": "active",
+      "licenseValidUntil": "2026-10-04",
+      "id": "45b62020-0d1b-4fe8-9a82-0c18076edd1f",
+      "createdAt": "2026-09-04T23:35:06.685Z",
+      "updatedAt": "2026-09-04T23:35:06.685Z",
+      "lastLoginAt": "2026-09-04T23:35:06.685Z",
+      "cedulaEspecialidad": ""
+    },
     {
       "id": "clinic_dra_rivas_1788492799904",
       "clinicName": "Consultorio Médico",
@@ -34,18 +56,15 @@
     }
   ],
   "deletedClinicIds": [
-    "dc2ac156-f3c3-4ee4-93e7-9b725e00e300",
-    "6b6ce601-ee73-4832-84f5-34282ed882b9",
-    "bdc71d7c-1130-4b7a-838f-ddd509745f7c",
-    "1e1f772e-5d2f-46f1-8f72-1dc1724ba8a0",
+    "7cfd1734-ad0e-432d-99a8-4db701739c2c",
+    "a40713e0-64f9-4d78-959b-cc83fd4e0c60",
     "b8010a5e-4524-4411-9fc6-48831a510d6d",
     "clinic_seed_central_01",
-    "a1f85477-58fa-444c-85f4-a23f55448e50",
-    "30f8541a-fd2a-4980-8cf0-1742b654b5f2",
+    "0d55d493-aa36-4d8c-9d6c-354ada5c0d70",
     "940b3587-a27c-4a52-9d16-765a3d341cf1",
     "241e3318-5acb-4f3c-a433-12e03858c87c",
     "0c0235f1-6632-4ae0-8e1a-454dbe5667bd",
-    "0d55d493-aa36-4d8c-9d6c-354ada5c0d70"
+    "6b6ce601-ee73-4832-84f5-34282ed882b9"
   ],
   "clinicRecords": {
     "clinic_dra_rivas_1788492799904": [
@@ -169,6 +188,22 @@
     ]
   },
   "clinicSettings": {
+    "45b62020-0d1b-4fe8-9a82-0c18076edd1f": {
+      "doctorName": "Jose",
+      "prefix": "Dr.",
+      "cedulaGeneral": "618382",
+      "cedulaEspecialidad": "",
+      "especialidad": "Medicina General",
+      "universidad": "",
+      "telefonoContacto": "",
+      "correoContacto": "",
+      "nombreClinica": "Ndjdkdksl",
+      "sucursal": "Centro",
+      "direccionClinica": "",
+      "telefonoClinica": "",
+      "logoUrl": "",
+      "primaryColor": "sky"
+    },
     "clinic_dra_rivas_1788492799904": {
       "doctorName": "Médico Responsable",
       "prefix": "Dra.",
