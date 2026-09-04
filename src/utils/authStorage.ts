@@ -149,8 +149,11 @@ export function getAdminContactInfo(): AdminContactInfo {
 export function saveAdminContactInfo(info: AdminContactInfo, syncToCloud: boolean = true): void {
   try {
     const freshInfo: AdminContactInfo = {
-      ...info,
-      updatedAt: info.updatedAt || new Date().toISOString()
+      adminName: cleanMojibake(info.adminName) || 'Fernando (Super Administrador)',
+      phoneWhatsApp: cleanMojibake(info.phoneWhatsApp) || '55 1234 5678',
+      email: cleanMojibake(info.email) || 'toybeatfer@gmail.com',
+      helpMessage: cleanMojibake(info.helpMessage) || '',
+      updatedAt: syncToCloud ? new Date().toISOString() : (info.updatedAt || new Date().toISOString())
     };
     localStorage.setItem(ADMIN_CONTACT_KEY, JSON.stringify(freshInfo));
     if (typeof window !== 'undefined') {
