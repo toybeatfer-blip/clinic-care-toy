@@ -143,6 +143,28 @@ export const App: React.FC = () => {
     }
   }, [session?.clinicId]);
 
+  // Sincronización continua en la nube cada 10s y al enfocar pestaña para consultorios
+  useEffect(() => {
+    if (session?.type === 'clinic' && session.clinicId) {
+      const doSync = () => {
+        pullClinicsFromCloud().then(res => {
+          if (res.success && session.clinicId) {
+            setSavedRecords(getClinicRecords(session.clinicId));
+          }
+        }).catch(() => {});
+      };
+
+      doSync();
+      const interval = setInterval(doSync, 10000);
+      window.addEventListener('focus', doSync);
+
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener('focus', doSync);
+      };
+    }
+  }, [session?.clinicId]);
+
   // Respaldo de emergencia: Si localStorage no tiene expedientes pero IndexedDB sí los tiene, restaurarlos automáticamente
   useEffect(() => {
     if (session?.type === 'clinic' && session.clinicId && savedRecords.length === 0) {

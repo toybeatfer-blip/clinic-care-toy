@@ -110,6 +110,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
       pullClinicsFromCloud().then(res => {
         if (res.success) {
           setClinics(getAllClinics());
+          setAdminContact(getAdminContactInfo());
           setLastSyncTime(getLastCloudSyncTime());
         }
       }).catch(() => {});

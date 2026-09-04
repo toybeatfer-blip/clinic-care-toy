@@ -6,7 +6,9 @@ import {
   saveAdminContactInfo,
   getDeletedClinicIds,
   cleanMojibake,
-  initClinicDatabase
+  initClinicDatabase,
+  getAllClinicRecordsMap,
+  saveAllClinicRecordsMap
 } from './authStorage';
 import { idbSaveClinics, idbGetClinics, idbSaveSnapshot } from './indexedDBStorage';
 
@@ -62,39 +64,74 @@ export function pullClinicsFromCloud(): Promise<{ success: boolean; count: numbe
 
   activePullPromise = (async () => {
     try {
-      const token = getAuthToken();
       let remoteList: ClinicAccount[] = [];
       let remoteAdminContact: AdminContactInfo | null = null;
+      let remoteClinicRecords: { [clinicId: string]: any[] } | null = null;
+      let remoteDeletedIds: string[] = [];
       let fetchedOk = false;
 
-      // 1. Intentar primero con la API de GitHub en tiempo real (0 segundos de caché)
+      // 1. PRIORIDAD 1: API Central en Tiempo Real (/api/sync) en Render / Local
       try {
-        const apiRes = await fetch(`${API_URL}?_t=${Date.now()}`, {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
+        const apiRes = await fetch(`/api/sync?_t=${Date.now()}`, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/vnd.github.v3+json',
-            'Cache-Control': 'no-cache'
-          }
+            'Accept': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate'
+          },
+          signal: controller.signal
         });
+        clearTimeout(timeoutId);
 
         if (apiRes.ok) {
           const apiData = await apiRes.json();
-          if (apiData && apiData.content) {
-            const jsonText = decodeBase64Utf8(apiData.content);
-            const parsed = JSON.parse(jsonText);
-            if (Array.isArray(parsed?.clinics)) {
-              remoteList = parsed.clinics;
-              remoteAdminContact = parsed.adminContact || null;
-              fetchedOk = true;
-            }
+          if (apiData && apiData.success) {
+            if (Array.isArray(apiData.clinics)) remoteList = apiData.clinics;
+            if (apiData.adminContact && typeof apiData.adminContact === 'object') remoteAdminContact = apiData.adminContact;
+            if (apiData.clinicRecords && typeof apiData.clinicRecords === 'object') remoteClinicRecords = apiData.clinicRecords;
+            if (Array.isArray(apiData.deletedClinicIds)) remoteDeletedIds = apiData.deletedClinicIds;
+            fetchedOk = true;
           }
         }
       } catch (apiErr) {
-        console.warn('API direct pull falló, intentando raw:', apiErr);
+        console.warn('API Central /api/sync no disponible, intentando GitHub Cloud Vault:', apiErr);
       }
 
-      // 2. Si falló la API directa, usar RAW_URL con timestamp antibuf
+      // 2. RESPALDO SECUNDARIO: API Directa de GitHub en tiempo real
+      if (!fetchedOk) {
+        try {
+          const token = getAuthToken();
+          const ghRes = await fetch(`${API_URL}?_t=${Date.now()}`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Accept': 'application/vnd.github.v3+json',
+              'Cache-Control': 'no-cache'
+            }
+          });
+
+          if (ghRes.ok) {
+            const ghData = await ghRes.json();
+            if (ghData && ghData.content) {
+              const jsonText = decodeBase64Utf8(ghData.content);
+              const parsed = JSON.parse(jsonText);
+              if (Array.isArray(parsed?.clinics)) {
+                remoteList = parsed.clinics;
+                remoteAdminContact = parsed.adminContact || null;
+                if (parsed.clinicRecords && typeof parsed.clinicRecords === 'object') {
+                  remoteClinicRecords = parsed.clinicRecords;
+                }
+                fetchedOk = true;
+              }
+            }
+          }
+        } catch (apiErr) {
+          console.warn('GitHub API pull falló:', apiErr);
+        }
+      }
+
+      // 3. RESPALDO TERCIARIO: RAW_URL con timestamp antibuf
       if (!fetchedOk) {
         try {
           const rawRes = await fetch(`${RAW_URL}?_t=${Date.now()}`, {
@@ -106,6 +143,9 @@ export function pullClinicsFromCloud(): Promise<{ success: boolean; count: numbe
             if (Array.isArray(rawData?.clinics)) {
               remoteList = rawData.clinics;
               remoteAdminContact = rawData.adminContact || null;
+              if (rawData.clinicRecords && typeof rawData.clinicRecords === 'object') {
+                remoteClinicRecords = rawData.clinicRecords;
+              }
               fetchedOk = true;
             }
           }
@@ -114,9 +154,13 @@ export function pullClinicsFromCloud(): Promise<{ success: boolean; count: numbe
         }
       }
 
+      const deletedIds = getDeletedClinicIds();
+      if (remoteDeletedIds && remoteDeletedIds.length > 0) {
+        remoteDeletedIds.forEach(id => deletedIds.add(id));
+      }
+
       const localList = getAllClinics();
       const idbList = await idbGetClinics();
-      const deletedIds = getDeletedClinicIds();
 
       const mergedMap = new Map<string, ClinicAccount>();
 
@@ -195,9 +239,14 @@ export function pullClinicsFromCloud(): Promise<{ success: boolean; count: numbe
         const remoteContactTime = safeDateParse(remoteAdminContact.updatedAt);
         const localContactTime = safeDateParse(localContact.updatedAt);
 
-        if (remoteContactTime > localContactTime) {
+        if (remoteContactTime >= localContactTime) {
           saveAdminContactInfo(remoteAdminContact, false);
         }
+      }
+
+      // Sincronizar expedientes clínicos de pacientes
+      if (remoteClinicRecords && typeof remoteClinicRecords === 'object') {
+        saveAllClinicRecordsMap(remoteClinicRecords);
       }
 
       localStorage.setItem(CLOUD_CACHE_TIMESTAMP_KEY, new Date().toISOString());
@@ -257,11 +306,61 @@ export function pushClinicsToCloud(clinicsToUpload?: ClinicAccount[], maxRetries
         }));
 
       const adminContact = getAdminContactInfo();
+      const clinicRecords = getAllClinicRecordsMap();
       const token = getAuthToken();
 
       // Guardar en respaldo local y en IndexedDB
       await idbSaveClinics(cleanList);
-      await idbSaveSnapshot({ clinics: cleanList, adminContact });
+      await idbSaveSnapshot({ clinics: cleanList, adminContact, clinicRecords });
+
+      // =========================================================================
+      // PRIORIDAD 1: API Central en Tiempo Real (/api/sync)
+      // Guardado instantáneo sin latencia de Git, sin 409 conflict y sin redeploys
+      // =========================================================================
+      try {
+        const payload = {
+          superAdmin: 'Fernando01',
+          updatedAt: new Date().toISOString(),
+          clinics: cleanList,
+          adminContact,
+          deletedClinicIds: Array.from(deletedIds),
+          clinicRecords
+        };
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+        const res = await fetch('/api/sync', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        if (res.ok) {
+          const resData = await res.json();
+          if (resData && resData.success) {
+            localStorage.setItem(CLOUD_CACHE_TIMESTAMP_KEY, new Date().toISOString());
+            if (Array.isArray(resData.clinics)) {
+              saveAllClinics(resData.clinics, false);
+              resData.clinics.forEach((c: ClinicAccount) => initClinicDatabase(c));
+            }
+            if (resData.adminContact) {
+              saveAdminContactInfo(resData.adminContact, false);
+            }
+            if (resData.clinicRecords) {
+              saveAllClinicRecordsMap(resData.clinicRecords);
+            }
+            return { success: true, count: resData.clinics?.length || cleanList.length };
+          }
+        }
+      } catch (apiErr) {
+        console.warn('API Central /api/sync no disponible para push, usando respaldo GitHub:', apiErr);
+      }
 
       let lastError = '';
 

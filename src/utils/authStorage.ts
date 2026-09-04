@@ -880,6 +880,9 @@ export function saveClinicRecord(clinicId: string, record: ClinicalRecord): Clin
     // Guardar en IndexedDB en segundo plano
     idbSaveClinicRecords(clinicId, nextList).catch(() => {});
 
+    // Sincronizar en segundo plano con la nube en tiempo real
+    setTimeout(() => pushClinicsToCloud().catch(() => {}), 80);
+
     return nextList;
   } catch (e) {
     console.error('Error saving clinic record', e);
@@ -894,10 +897,65 @@ export function deleteClinicRecord(clinicId: string, recordId: string): Clinical
     localStorage.setItem(`clinic_care_records_clinic_${clinicId}_v2`, JSON.stringify(filtered));
     localStorage.setItem(`clinic_care_backup_records_${clinicId}_v2`, JSON.stringify(filtered));
     idbSaveClinicRecords(clinicId, filtered).catch(() => {});
+
+    setTimeout(() => pushClinicsToCloud().catch(() => {}), 80);
+
     return filtered;
   } catch (e) {
     console.error('Error deleting record', e);
     return [];
+  }
+}
+
+export function getAllClinicRecordsMap(): { [clinicId: string]: ClinicalRecord[] } {
+  try {
+    const map: { [clinicId: string]: ClinicalRecord[] } = {};
+    const clinics = getAllClinics();
+    clinics.forEach(c => {
+      if (c && c.id) {
+        const recs = getClinicRecords(c.id);
+        if (recs && recs.length > 0) {
+          map[c.id] = recs;
+        }
+      }
+    });
+    return map;
+  } catch (e) {
+    return {};
+  }
+}
+
+export function saveAllClinicRecordsMap(remoteMap: { [clinicId: string]: ClinicalRecord[] }): void {
+  if (!remoteMap || typeof remoteMap !== 'object') return;
+  try {
+    for (const [clinicId, remoteList] of Object.entries(remoteMap)) {
+      if (!Array.isArray(remoteList) || remoteList.length === 0) continue;
+      const localList = getClinicRecords(clinicId);
+      const mergedMap = new Map<string, ClinicalRecord>();
+      localList.forEach(r => { if (r && r.id) mergedMap.set(r.id, r); });
+
+      remoteList.forEach(rawR => {
+        const r = deepMergeBlank(rawR);
+        if (!r || !r.id) return;
+        if (!mergedMap.has(r.id)) {
+          mergedMap.set(r.id, r);
+        } else {
+          const local = mergedMap.get(r.id)!;
+          const remoteTime = (r.updatedAt ? new Date(r.updatedAt).getTime() : 0);
+          const localTime = (local.updatedAt ? new Date(local.updatedAt).getTime() : 0);
+          if (remoteTime >= localTime) {
+            mergedMap.set(r.id, r);
+          }
+        }
+      });
+
+      const finalList = Array.from(mergedMap.values());
+      localStorage.setItem(`clinic_care_records_clinic_${clinicId}_v2`, JSON.stringify(finalList));
+      localStorage.setItem(`clinic_care_backup_records_${clinicId}_v2`, JSON.stringify(finalList));
+      idbSaveClinicRecords(clinicId, finalList).catch(() => {});
+    }
+  } catch (e) {
+    console.error('Error saving remote clinic records map:', e);
   }
 }
 
