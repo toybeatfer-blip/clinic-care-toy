@@ -10,7 +10,8 @@ import {
   getAllClinicRecordsMap,
   saveAllClinicRecordsMap,
   getAllClinicSettingsMap,
-  saveAllClinicSettingsMap
+  saveAllClinicSettingsMap,
+  deepScanAllClinics
 } from './authStorage';
 import { idbSaveClinics, idbGetClinics, idbSaveSnapshot } from './indexedDBStorage';
 
@@ -57,6 +58,30 @@ const safeDateParse = (d?: string | null): number => {
   const t = new Date(d).getTime();
   return isNaN(t) ? 0 : t;
 };
+
+export function mergeAdminContacts(local: AdminContactInfo, remote?: AdminContactInfo | null): AdminContactInfo {
+  if (!remote || typeof remote !== 'object') return local;
+  if (!local || typeof local !== 'object') return remote;
+
+  const isDefault = (c: AdminContactInfo) => {
+    const isDefPhone = !c.phoneWhatsApp || c.phoneWhatsApp.trim() === '55 1234 5678';
+    const isDefTime = !c.updatedAt || c.updatedAt === '2026-01-01T00:00:00.000Z';
+    return isDefPhone && isDefTime;
+  };
+
+  const localDefault = isDefault(local);
+  const remoteDefault = isDefault(remote);
+
+  // Si el local es por defecto pero el remoto fue personalizado, el remoto siempre gana
+  if (localDefault && !remoteDefault) return remote;
+  // Si el remoto es por defecto pero el local fue personalizado, el local siempre gana
+  if (!localDefault && remoteDefault) return local;
+
+  // Si ambos son personalizados o ambos son por defecto, comparar fechas
+  const localTime = safeDateParse(local.updatedAt);
+  const remoteTime = safeDateParse(remote.updatedAt);
+  return remoteTime > localTime ? remote : local;
+}
 
 // 1. Descargar Consultorios DESDE la Nube (Pull con Protección Anti-Borrado y Sincronización Bidireccional)
 export function pullClinicsFromCloud(): Promise<{ success: boolean; count: number; error?: string }> {
@@ -178,19 +203,27 @@ export function pullClinicsFromCloud(): Promise<{ success: boolean; count: numbe
         remoteDeletedIds.forEach(id => deletedIds.add(id));
       }
 
+      const { clinics: deepList } = await deepScanAllClinics();
       const localList = getAllClinics();
       const idbList = await idbGetClinics();
 
       const mergedMap = new Map<string, ClinicAccount>();
 
-      // Cargar locales
+      // 1. Cargar escaneo profundo primero (rescata consultorios atrapados en la memoria del celular o PC)
+      deepList.forEach(c => {
+        if (c && c.id && !deletedIds.has(c.id)) {
+          mergedMap.set(c.id, c);
+        }
+      });
+
+      // 2. Cargar locales
       localList.forEach(c => {
         if (c && c.id && !deletedIds.has(c.id)) {
           mergedMap.set(c.id, c);
         }
       });
 
-      // Cargar IndexedDB (por si se limpió localStorage)
+      // 3. Cargar IndexedDB
       idbList.forEach(c => {
         if (c && c.id && !deletedIds.has(c.id)) {
           if (!mergedMap.has(c.id)) {
@@ -252,14 +285,15 @@ export function pullClinicsFromCloud(): Promise<{ success: boolean; count: numbe
       finalList.forEach(c => initClinicDatabase(c));
       await idbSaveClinics(finalList);
 
-      // Sincronizar datos de contacto del Administrador
+      // Sincronizar datos de contacto del Administrador con Blindaje Inteligente
       if (remoteAdminContact && typeof remoteAdminContact === 'object') {
         const localContact = getAdminContactInfo();
-        const remoteContactTime = safeDateParse(remoteAdminContact.updatedAt);
-        const localContactTime = safeDateParse(localContact.updatedAt);
-
-        if (remoteContactTime >= localContactTime) {
-          saveAdminContactInfo(remoteAdminContact, false);
+        const mergedContact = mergeAdminContacts(localContact, remoteAdminContact);
+        if (JSON.stringify(mergedContact) !== JSON.stringify(localContact)) {
+          saveAdminContactInfo(mergedContact, false);
+        }
+        if (JSON.stringify(mergedContact) !== JSON.stringify(remoteAdminContact)) {
+          setTimeout(() => pushClinicsToCloud().catch(() => {}), 100);
         }
       }
 
@@ -342,8 +376,7 @@ export function pushClinicsToCloud(clinicsToUpload?: ClinicAccount[], maxRetries
       await idbSaveSnapshot({ clinics: cleanList, adminContact, clinicRecords, clinicSettings });
 
       // =========================================================================
-      // PRIORIDAD 1: API Central en Tiempo Real (/api/sync)
-      // Guardado instantáneo sin latencia de Git, sin 409 conflict y sin redeploys
+      // CANAL 1: Servidor Render en Tiempo Real (/api/sync)
       // =========================================================================
       try {
         const payload = {
@@ -357,9 +390,9 @@ export function pushClinicsToCloud(clinicsToUpload?: ClinicAccount[], maxRetries
         };
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
 
-        const res = await fetch('/api/sync', {
+        fetch('/api/sync', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -367,35 +400,25 @@ export function pushClinicsToCloud(clinicsToUpload?: ClinicAccount[], maxRetries
           },
           body: JSON.stringify(payload),
           signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-
-        if (res.ok) {
-          const contentType = res.headers.get('content-type') || '';
-          if (contentType.includes('application/json')) {
-            const resData = await res.json();
-            if (resData && resData.success) {
-              localStorage.setItem(CLOUD_CACHE_TIMESTAMP_KEY, new Date().toISOString());
-              if (Array.isArray(resData.clinics)) {
-                saveAllClinics(resData.clinics, false);
-                resData.clinics.forEach((c: ClinicAccount) => initClinicDatabase(c));
+        }).then(async res => {
+          clearTimeout(timeoutId);
+          if (res.ok) {
+            const contentType = res.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) {
+              const resData = await res.json();
+              if (resData && resData.success) {
+                localStorage.setItem(CLOUD_CACHE_TIMESTAMP_KEY, new Date().toISOString());
               }
-              if (resData.adminContact) {
-                saveAdminContactInfo(resData.adminContact, false);
-              }
-              if (resData.clinicRecords) {
-                saveAllClinicRecordsMap(resData.clinicRecords);
-              }
-              if (resData.clinicSettings) {
-                saveAllClinicSettingsMap(resData.clinicSettings);
-              }
-              return { success: true, count: resData.clinics?.length || cleanList.length };
             }
           }
-        }
-      } catch (apiErr) {
-        console.warn('API Central /api/sync no disponible para push, usando respaldo GitHub:', apiErr);
-      }
+        }).catch(() => {
+          clearTimeout(timeoutId);
+        });
+      } catch (apiErr) {}
+
+      // =========================================================================
+      // CANAL 2: BÓVEDA PERMANENTE EN GITHUB (24/7 SIN REINICIOS NI PÉRDIDA)
+      // =========================================================================
 
       let lastError = '';
 
@@ -406,6 +429,7 @@ export function pushClinicsToCloud(clinicsToUpload?: ClinicAccount[], maxRetries
           let remoteClinics: ClinicAccount[] = [];
           let remoteClinicRecords: { [clinicId: string]: any[] } = {};
           let remoteClinicSettings: { [clinicId: string]: any } = {};
+          let remoteAdminContact: AdminContactInfo | null = null;
 
           try {
             const existingRes = await fetch(`${API_URL}?_t=${Date.now()}`, {
@@ -425,6 +449,9 @@ export function pushClinicsToCloud(clinicsToUpload?: ClinicAccount[], maxRetries
                 const parsed = JSON.parse(text);
                 if (Array.isArray(parsed?.clinics)) {
                   remoteClinics = parsed.clinics;
+                }
+                if (parsed?.adminContact && typeof parsed.adminContact === 'object') {
+                  remoteAdminContact = parsed.adminContact;
                 }
                 if (parsed?.clinicRecords && typeof parsed.clinicRecords === 'object') {
                   remoteClinicRecords = parsed.clinicRecords;
@@ -522,10 +549,16 @@ export function pushClinicsToCloud(clinicsToUpload?: ClinicAccount[], maxRetries
             mergedClinicSettings[cId] = { ...(mergedClinicSettings[cId] || {}), ...localSet };
           }
 
+          // Fusionar Datos de Contacto de Administrador con Blindaje Inteligente
+          const adminContactToCommit = mergeAdminContacts(adminContact, remoteAdminContact);
+          if (JSON.stringify(adminContactToCommit) !== JSON.stringify(adminContact)) {
+            saveAdminContactInfo(adminContactToCommit, false);
+          }
+
           const payload = {
             superAdmin: 'Fernando01',
             updatedAt: new Date().toISOString(),
-            adminContact,
+            adminContact: adminContactToCommit,
             clinics: clinicsToCommit,
             deletedClinicIds: Array.from(deletedIds),
             clinicRecords: mergedClinicRecords,
