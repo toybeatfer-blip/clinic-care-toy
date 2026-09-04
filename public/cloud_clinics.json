@@ -1,6 +1,6 @@
 {
   "superAdmin": "Fernando01",
-  "updatedAt": "2026-09-04T23:35:07.498Z",
+  "updatedAt": "2026-09-04T23:35:08.936Z",
   "adminContact": {
     "adminName": "Fernando (Super Administrador)",
     "phoneWhatsApp": "+52 474 1539891",
@@ -10,26 +10,27 @@
   },
   "clinics": [
     {
+      "id": "45b62020-0d1b-4fe8-9a82-0c18076edd1f",
       "clinicName": "Ndjdkdksl",
-      "sucursal": "Centro",
+      "username": "Admin",
+      "passwordPlain": "Admin123",
       "doctorName": "Jose",
       "prefix": "Dr.",
       "cedulaGeneral": "618382",
+      "cedulaEspecialidad": "",
       "especialidad": "Medicina General",
       "universidad": "",
-      "username": "Admin",
-      "passwordPlain": "Admin123",
       "telefono": "",
       "correo": "",
       "direccion": "",
+      "sucursal": "Centro",
+      "logoUrl": "",
       "primaryColor": "sky",
-      "licenseStatus": "active",
-      "licenseValidUntil": "2026-10-04",
-      "id": "45b62020-0d1b-4fe8-9a82-0c18076edd1f",
       "createdAt": "2026-09-04T23:35:06.685Z",
       "updatedAt": "2026-09-04T23:35:06.685Z",
       "lastLoginAt": "2026-09-04T23:35:06.685Z",
-      "cedulaEspecialidad": ""
+      "licenseStatus": "active",
+      "licenseValidUntil": "2026-10-04"
     },
     {
       "id": "clinic_dra_rivas_1788492799904",
