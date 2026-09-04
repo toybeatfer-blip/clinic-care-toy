@@ -1,6 +1,6 @@
 {
   "superAdmin": "Fernando01",
-  "updatedAt": "2026-09-04T03:33:19.905Z",
+  "updatedAt": "2026-09-04T03:43:04.372Z",
   "adminContact": {
     "adminName": "Fernando (Super Administrador)",
     "phoneWhatsApp": "55 1234 5678",
@@ -54,6 +54,29 @@
       "createdAt": "2026-09-04T03:33:19.904Z",
       "updatedAt": "2026-09-04T03:33:19.905Z",
       "lastLoginAt": "2026-09-04T03:33:19.905Z"
+    },
+    {
+      "id": "clinic_test_pedro_1788493383935",
+      "clinicName": "Consultorio San Pedro",
+      "doctorName": "Pedro Ramírez",
+      "prefix": "Dr.",
+      "cedulaGeneral": "88776655",
+      "cedulaEspecialidad": "ESP-112233",
+      "especialidad": "Pediatría y Neonatología",
+      "universidad": "Universidad Nacional",
+      "username": "dr.pedro",
+      "passwordPlain": "pedro2026",
+      "telefono": "55 4433 2211",
+      "correo": "dr.pedro@example.com",
+      "direccion": "Av. Las Palmas 500",
+      "sucursal": "Sucursal Sur",
+      "logoUrl": "",
+      "primaryColor": "teal",
+      "licenseStatus": "active",
+      "licenseValidUntil": "2026-12-31",
+      "createdAt": "2026-09-04T03:43:03.935Z",
+      "updatedAt": "2026-09-04T03:43:03.936Z",
+      "lastLoginAt": "2026-09-04T03:43:03.936Z"
     }
   ]
 }
