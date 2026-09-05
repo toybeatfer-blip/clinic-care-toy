@@ -1,6 +1,6 @@
 {
   "superAdmin": "Fernando01",
-  "updatedAt": "2026-09-05T01:09:40.306Z",
+  "updatedAt": "2026-09-05T01:10:33.773Z",
   "adminContact": {
     "adminName": "Fernando (Super Administrador)",
     "phoneWhatsApp": "+52 474 1539891",
@@ -50,10 +50,10 @@
       "logoUrl": "",
       "primaryColor": "sky",
       "createdAt": "2026-09-04T03:33:19.904Z",
-      "updatedAt": "2026-09-04T03:33:19.905Z",
+      "updatedAt": "2026-09-05T01:10:33.067Z",
       "lastLoginAt": "2026-09-04T03:33:19.905Z",
       "licenseStatus": "active",
-      "licenseValidUntil": "Indefinida"
+      "licenseValidUntil": "2026-10-05"
     }
   ],
   "deletedClinicIds": [
