@@ -60,9 +60,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
 
   const [adminInfo, setAdminInfo] = useState(getAdminContactInfo());
 
-  // Sincronización automática con la nube al abrir la pantalla
+  // Sincronización automática con la nube al abrir la pantalla y en tiempo real
   useEffect(() => {
     pullClinicsFromCloud().catch(() => {});
+
+    const interval = setInterval(() => {
+      pullClinicsFromCloud().catch(() => {});
+    }, 4000);
 
     const handleUpdate = () => {
       setAdminInfo(getAdminContactInfo());
@@ -70,6 +74,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     window.addEventListener('clinic_care_admin_contact_updated_v2', handleUpdate);
     window.addEventListener('storage', handleUpdate);
     return () => {
+      clearInterval(interval);
       window.removeEventListener('clinic_care_admin_contact_updated_v2', handleUpdate);
       window.removeEventListener('storage', handleUpdate);
     };

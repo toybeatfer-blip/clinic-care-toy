@@ -149,8 +149,11 @@ export function getAdminContactInfo(): AdminContactInfo {
 export function saveAdminContactInfo(info: AdminContactInfo, syncToCloud: boolean = true): void {
   try {
     const freshInfo: AdminContactInfo = {
-      ...info,
-      updatedAt: info.updatedAt || new Date().toISOString()
+      adminName: cleanMojibake(info.adminName) || 'Fernando (Super Administrador)',
+      phoneWhatsApp: cleanMojibake(info.phoneWhatsApp) || '55 1234 5678',
+      email: cleanMojibake(info.email) || 'toybeatfer@gmail.com',
+      helpMessage: cleanMojibake(info.helpMessage) || '',
+      updatedAt: syncToCloud ? new Date().toISOString() : (info.updatedAt || new Date().toISOString())
     };
     localStorage.setItem(ADMIN_CONTACT_KEY, JSON.stringify(freshInfo));
     if (typeof window !== 'undefined') {
@@ -919,6 +922,22 @@ export function getAllClinicRecordsMap(): { [clinicId: string]: ClinicalRecord[]
         }
       }
     });
+
+    if (typeof localStorage !== 'undefined') {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('clinic_care_records_clinic_') && key.endsWith('_v2')) {
+          const cId = key.replace('clinic_care_records_clinic_', '').replace('_v2', '');
+          if (cId && !map[cId]) {
+            const recs = getClinicRecords(cId);
+            if (recs && recs.length > 0) {
+              map[cId] = recs;
+            }
+          }
+        }
+      }
+    }
+
     return map;
   } catch (e) {
     return {};
@@ -1040,8 +1059,50 @@ export function saveClinicSettings(clinicId: string, settings: DoctorSettings): 
       logoUrl: settings.logoUrl,
       primaryColor: settings.primaryColor
     });
+    setTimeout(() => pushClinicsToCloud().catch(() => {}), 80);
   } catch (e) {
     console.error('Error saving clinic settings', e);
+  }
+}
+
+export function getAllClinicSettingsMap(): { [clinicId: string]: DoctorSettings } {
+  try {
+    const map: { [clinicId: string]: DoctorSettings } = {};
+    const clinics = getAllClinics();
+    clinics.forEach(c => {
+      if (c && c.id) {
+        map[c.id] = getClinicSettings(c.id);
+      }
+    });
+
+    if (typeof localStorage !== 'undefined') {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('clinic_care_settings_clinic_') && key.endsWith('_v2')) {
+          const cId = key.replace('clinic_care_settings_clinic_', '').replace('_v2', '');
+          if (cId && !map[cId]) {
+            map[cId] = getClinicSettings(cId);
+          }
+        }
+      }
+    }
+
+    return map;
+  } catch (e) {
+    return {};
+  }
+}
+
+export function saveAllClinicSettingsMap(remoteSettingsMap: { [clinicId: string]: DoctorSettings }): void {
+  if (!remoteSettingsMap || typeof remoteSettingsMap !== 'object') return;
+  try {
+    for (const [clinicId, settings] of Object.entries(remoteSettingsMap)) {
+      if (!settings || typeof settings !== 'object') continue;
+      localStorage.setItem(`clinic_care_settings_clinic_${clinicId}_v2`, JSON.stringify(settings));
+      idbSaveClinicSettings(clinicId, settings).catch(() => {});
+    }
+  } catch (e) {
+    console.error('Error saving remote clinic settings map:', e);
   }
 }
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, UserCog, Phone, Mail, MessageSquare, Check, ShieldCheck } from 'lucide-react';
 import { AdminContactInfo } from '../types';
 import { getAdminContactInfo, saveAdminContactInfo } from '../utils/authStorage';
+import { pushClinicsToCloud } from '../utils/cloudStorage';
 
 interface AdminContactModalProps {
   isOpen: boolean;
@@ -16,27 +17,37 @@ export const AdminContactModal: React.FC<AdminContactModalProps> = ({
 }) => {
   const [contactData, setContactData] = useState<AdminContactInfo>(getAdminContactInfo());
   const [isSaved, setIsSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Cada vez que se abre el modal, cargar los datos más recientes
   useEffect(() => {
     if (isOpen) {
       setContactData(getAdminContactInfo());
       setIsSaved(false);
+      setIsSaving(false);
     }
   }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Guarda en localStorage y emite el evento global en tiempo real
-    saveAdminContactInfo(contactData);
-    if (onSaved) onSaved(contactData);
+    setIsSaving(true);
+    const fresh: AdminContactInfo = {
+      ...contactData,
+      updatedAt: new Date().toISOString()
+    };
+    saveAdminContactInfo(fresh, true);
+    if (onSaved) onSaved(fresh);
+    try {
+      await pushClinicsToCloud();
+    } catch (err) {}
+    setIsSaving(false);
     setIsSaved(true);
     setTimeout(() => {
       setIsSaved(false);
       onClose();
-    }, 1000);
+    }, 900);
   };
 
   return (

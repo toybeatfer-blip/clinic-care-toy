@@ -70,7 +70,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Función para recargar la lista de consultorios desde la nube y almacenamiento local
-  const refreshClinics = async () => {
+  const refreshClinics = async (showToast: boolean = false) => {
     setIsRefreshing(true);
     try {
       await pullClinicsFromCloud();
@@ -80,6 +80,9 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
     setAdminContact(getAdminContactInfo());
     setLastSyncTime(getLastCloudSyncTime());
     setTimeout(() => setIsRefreshing(false), 300);
+    if (showToast) {
+      alert(`✅ Sincronización en la Nube Completada:\n\n• Consultorios sincronizados: ${latest.length}\n• Cuentas activas: ${latest.map(c => c.username).join(', ')}\n\nTus datos están completamente unificados entre tu PC, celular y tablet.`);
+    }
   };
 
   // Función de escaneo profundo y recuperación de consultorios previos
@@ -125,17 +128,21 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
       else setAdminContact(getAdminContactInfo());
     };
 
+    const handleFocus = () => {
+      refreshClinics(false);
+    };
+
     window.addEventListener(CLINICS_UPDATED_EVENT, handleUpdate);
     window.addEventListener(ADMIN_CONTACT_EVENT, handleContactUpdate);
     window.addEventListener('storage', handleUpdate);
-    window.addEventListener('focus', refreshClinics);
+    window.addEventListener('focus', handleFocus);
 
     return () => {
       clearInterval(syncInterval);
       window.removeEventListener(CLINICS_UPDATED_EVENT, handleUpdate);
       window.removeEventListener(ADMIN_CONTACT_EVENT, handleContactUpdate);
       window.removeEventListener('storage', handleUpdate);
-      window.removeEventListener('focus', refreshClinics);
+      window.removeEventListener('focus', handleFocus);
     };
   }, []);
 
@@ -270,8 +277,8 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
             {/* Cloud Sync Status Indicator */}
             <button
               type="button"
-              onClick={refreshClinics}
-              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border ${
+              onClick={() => refreshClinics(true)}
+              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
                 isRefreshing
                   ? 'bg-sky-500/20 text-sky-300 border-sky-500/40 animate-pulse'
                   : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
@@ -285,8 +292,8 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
             {/* Refresh Button */}
             <button
               type="button"
-              onClick={refreshClinics}
-              className={`p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all ${
+              onClick={() => refreshClinics(true)}
+              className={`p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all cursor-pointer ${
                 isRefreshing ? 'animate-spin text-sky-400' : ''
               }`}
               title="Actualizar / Refrescar lista de consultorios en vivo"

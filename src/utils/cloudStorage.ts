@@ -8,7 +8,10 @@ import {
   cleanMojibake,
   initClinicDatabase,
   getAllClinicRecordsMap,
-  saveAllClinicRecordsMap
+  saveAllClinicRecordsMap,
+  getAllClinicSettingsMap,
+  saveAllClinicSettingsMap,
+  deepScanAllClinics
 } from './authStorage';
 import { idbSaveClinics, idbGetClinics, idbSaveSnapshot } from './indexedDBStorage';
 
@@ -56,6 +59,30 @@ const safeDateParse = (d?: string | null): number => {
   return isNaN(t) ? 0 : t;
 };
 
+export function mergeAdminContacts(local: AdminContactInfo, remote?: AdminContactInfo | null): AdminContactInfo {
+  if (!remote || typeof remote !== 'object') return local;
+  if (!local || typeof local !== 'object') return remote;
+
+  const isDefault = (c: AdminContactInfo) => {
+    const isDefPhone = !c.phoneWhatsApp || c.phoneWhatsApp.trim() === '55 1234 5678';
+    const isDefTime = !c.updatedAt || c.updatedAt === '2026-01-01T00:00:00.000Z';
+    return isDefPhone && isDefTime;
+  };
+
+  const localDefault = isDefault(local);
+  const remoteDefault = isDefault(remote);
+
+  // Si el local es por defecto pero el remoto fue personalizado, el remoto siempre gana
+  if (localDefault && !remoteDefault) return remote;
+  // Si el remoto es por defecto pero el local fue personalizado, el local siempre gana
+  if (!localDefault && remoteDefault) return local;
+
+  // Si ambos son personalizados o ambos son por defecto, comparar fechas
+  const localTime = safeDateParse(local.updatedAt);
+  const remoteTime = safeDateParse(remote.updatedAt);
+  return remoteTime > localTime ? remote : local;
+}
+
 // 1. Descargar Consultorios DESDE la Nube (Pull con Protección Anti-Borrado y Sincronización Bidireccional)
 export function pullClinicsFromCloud(): Promise<{ success: boolean; count: number; error?: string }> {
   if (activePullPromise) {
@@ -67,6 +94,7 @@ export function pullClinicsFromCloud(): Promise<{ success: boolean; count: numbe
       let remoteList: ClinicAccount[] = [];
       let remoteAdminContact: AdminContactInfo | null = null;
       let remoteClinicRecords: { [clinicId: string]: any[] } | null = null;
+      let remoteClinicSettings: { [clinicId: string]: any } | null = null;
       let remoteDeletedIds: string[] = [];
       let fetchedOk = false;
 
@@ -85,13 +113,17 @@ export function pullClinicsFromCloud(): Promise<{ success: boolean; count: numbe
         clearTimeout(timeoutId);
 
         if (apiRes.ok) {
-          const apiData = await apiRes.json();
-          if (apiData && apiData.success) {
-            if (Array.isArray(apiData.clinics)) remoteList = apiData.clinics;
-            if (apiData.adminContact && typeof apiData.adminContact === 'object') remoteAdminContact = apiData.adminContact;
-            if (apiData.clinicRecords && typeof apiData.clinicRecords === 'object') remoteClinicRecords = apiData.clinicRecords;
-            if (Array.isArray(apiData.deletedClinicIds)) remoteDeletedIds = apiData.deletedClinicIds;
-            fetchedOk = true;
+          const contentType = apiRes.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            const apiData = await apiRes.json();
+            if (apiData && apiData.success) {
+              if (Array.isArray(apiData.clinics)) remoteList = apiData.clinics;
+              if (apiData.adminContact && typeof apiData.adminContact === 'object') remoteAdminContact = apiData.adminContact;
+              if (apiData.clinicRecords && typeof apiData.clinicRecords === 'object') remoteClinicRecords = apiData.clinicRecords;
+              if (apiData.clinicSettings && typeof apiData.clinicSettings === 'object') remoteClinicSettings = apiData.clinicSettings;
+              if (Array.isArray(apiData.deletedClinicIds)) remoteDeletedIds = apiData.deletedClinicIds;
+              fetchedOk = true;
+            }
           }
         }
       } catch (apiErr) {
@@ -122,6 +154,12 @@ export function pullClinicsFromCloud(): Promise<{ success: boolean; count: numbe
                 if (parsed.clinicRecords && typeof parsed.clinicRecords === 'object') {
                   remoteClinicRecords = parsed.clinicRecords;
                 }
+                if (parsed.clinicSettings && typeof parsed.clinicSettings === 'object') {
+                  remoteClinicSettings = parsed.clinicSettings;
+                }
+                if (Array.isArray(parsed.deletedClinicIds)) {
+                  remoteDeletedIds = parsed.deletedClinicIds;
+                }
                 fetchedOk = true;
               }
             }
@@ -146,6 +184,12 @@ export function pullClinicsFromCloud(): Promise<{ success: boolean; count: numbe
               if (rawData.clinicRecords && typeof rawData.clinicRecords === 'object') {
                 remoteClinicRecords = rawData.clinicRecords;
               }
+              if (rawData.clinicSettings && typeof rawData.clinicSettings === 'object') {
+                remoteClinicSettings = rawData.clinicSettings;
+              }
+              if (Array.isArray(rawData.deletedClinicIds)) {
+                remoteDeletedIds = rawData.deletedClinicIds;
+              }
               fetchedOk = true;
             }
           }
@@ -159,19 +203,27 @@ export function pullClinicsFromCloud(): Promise<{ success: boolean; count: numbe
         remoteDeletedIds.forEach(id => deletedIds.add(id));
       }
 
+      const { clinics: deepList } = await deepScanAllClinics();
       const localList = getAllClinics();
       const idbList = await idbGetClinics();
 
       const mergedMap = new Map<string, ClinicAccount>();
 
-      // Cargar locales
+      // 1. Cargar escaneo profundo primero (rescata consultorios atrapados en la memoria del celular o PC)
+      deepList.forEach(c => {
+        if (c && c.id && !deletedIds.has(c.id)) {
+          mergedMap.set(c.id, c);
+        }
+      });
+
+      // 2. Cargar locales
       localList.forEach(c => {
         if (c && c.id && !deletedIds.has(c.id)) {
           mergedMap.set(c.id, c);
         }
       });
 
-      // Cargar IndexedDB (por si se limpió localStorage)
+      // 3. Cargar IndexedDB
       idbList.forEach(c => {
         if (c && c.id && !deletedIds.has(c.id)) {
           if (!mergedMap.has(c.id)) {
@@ -233,14 +285,15 @@ export function pullClinicsFromCloud(): Promise<{ success: boolean; count: numbe
       finalList.forEach(c => initClinicDatabase(c));
       await idbSaveClinics(finalList);
 
-      // Sincronizar datos de contacto del Administrador
+      // Sincronizar datos de contacto del Administrador con Blindaje Inteligente
       if (remoteAdminContact && typeof remoteAdminContact === 'object') {
         const localContact = getAdminContactInfo();
-        const remoteContactTime = safeDateParse(remoteAdminContact.updatedAt);
-        const localContactTime = safeDateParse(localContact.updatedAt);
-
-        if (remoteContactTime >= localContactTime) {
-          saveAdminContactInfo(remoteAdminContact, false);
+        const mergedContact = mergeAdminContacts(localContact, remoteAdminContact);
+        if (JSON.stringify(mergedContact) !== JSON.stringify(localContact)) {
+          saveAdminContactInfo(mergedContact, false);
+        }
+        if (JSON.stringify(mergedContact) !== JSON.stringify(remoteAdminContact)) {
+          setTimeout(() => pushClinicsToCloud().catch(() => {}), 100);
         }
       }
 
@@ -249,19 +302,27 @@ export function pullClinicsFromCloud(): Promise<{ success: boolean; count: numbe
         saveAllClinicRecordsMap(remoteClinicRecords);
       }
 
+      // Sincronizar configuraciones de consultorios (logos, membretes, especialidades)
+      if (remoteClinicSettings && typeof remoteClinicSettings === 'object') {
+        saveAllClinicSettingsMap(remoteClinicSettings);
+      }
+
       localStorage.setItem(CLOUD_CACHE_TIMESTAMP_KEY, new Date().toISOString());
 
       // BLINDAJE Y SINCRONIZACIÓN BIDIRECCIONAL:
-      // Si la máquina local contiene consultorios que la nube remota no tenía,
-      // subirlos inmediatamente a la nube para que cualquier otro dispositivo (celular, tablet)
-      // los pueda descargar al instante.
+      // Si la máquina local contiene consultorios, expedientes o configuraciones que la nube no tenía,
+      // subirlos inmediatamente a la nube para que cualquier otro dispositivo los tenga al instante.
       if (fetchedOk) {
         const remoteIdSet = new Set(remoteList.map(r => r.id));
         const remoteUserSet = new Set(remoteList.map(r => (r.username || '').toLowerCase()));
-        const hasMissingInCloud = finalList.some(l => !remoteIdSet.has(l.id) && !remoteUserSet.has((l.username || '').toLowerCase()));
+        const hasMissingClinics = finalList.some(l => !remoteIdSet.has(l.id) && !remoteUserSet.has((l.username || '').toLowerCase()));
+        
+        const localRecordsMap = getAllClinicRecordsMap();
+        const hasLocalRecords = Object.keys(localRecordsMap).length > 0;
+        const remoteRecordsEmpty = !remoteClinicRecords || Object.keys(remoteClinicRecords).length === 0;
 
-        if (hasMissingInCloud || (remoteList.length === 0 && finalList.length > 0)) {
-          console.log('☁️ Sincronización bidireccional activa: Subiendo consultorios locales a la nube...');
+        if (hasMissingClinics || (hasLocalRecords && remoteRecordsEmpty) || (remoteList.length === 0 && finalList.length > 0)) {
+          console.log('☁️ Sincronización bidireccional activa: Subiendo datos locales completos a la nube...');
           pushClinicsToCloud(finalList).catch(() => {});
         }
       }
@@ -307,15 +368,15 @@ export function pushClinicsToCloud(clinicsToUpload?: ClinicAccount[], maxRetries
 
       const adminContact = getAdminContactInfo();
       const clinicRecords = getAllClinicRecordsMap();
+      const clinicSettings = getAllClinicSettingsMap();
       const token = getAuthToken();
 
       // Guardar en respaldo local y en IndexedDB
       await idbSaveClinics(cleanList);
-      await idbSaveSnapshot({ clinics: cleanList, adminContact, clinicRecords });
+      await idbSaveSnapshot({ clinics: cleanList, adminContact, clinicRecords, clinicSettings });
 
       // =========================================================================
-      // PRIORIDAD 1: API Central en Tiempo Real (/api/sync)
-      // Guardado instantáneo sin latencia de Git, sin 409 conflict y sin redeploys
+      // CANAL 1: Servidor Render en Tiempo Real (/api/sync)
       // =========================================================================
       try {
         const payload = {
@@ -324,13 +385,14 @@ export function pushClinicsToCloud(clinicsToUpload?: ClinicAccount[], maxRetries
           clinics: cleanList,
           adminContact,
           deletedClinicIds: Array.from(deletedIds),
-          clinicRecords
+          clinicRecords,
+          clinicSettings
         };
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
 
-        const res = await fetch('/api/sync', {
+        fetch('/api/sync', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -338,29 +400,25 @@ export function pushClinicsToCloud(clinicsToUpload?: ClinicAccount[], maxRetries
           },
           body: JSON.stringify(payload),
           signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-
-        if (res.ok) {
-          const resData = await res.json();
-          if (resData && resData.success) {
-            localStorage.setItem(CLOUD_CACHE_TIMESTAMP_KEY, new Date().toISOString());
-            if (Array.isArray(resData.clinics)) {
-              saveAllClinics(resData.clinics, false);
-              resData.clinics.forEach((c: ClinicAccount) => initClinicDatabase(c));
+        }).then(async res => {
+          clearTimeout(timeoutId);
+          if (res.ok) {
+            const contentType = res.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) {
+              const resData = await res.json();
+              if (resData && resData.success) {
+                localStorage.setItem(CLOUD_CACHE_TIMESTAMP_KEY, new Date().toISOString());
+              }
             }
-            if (resData.adminContact) {
-              saveAdminContactInfo(resData.adminContact, false);
-            }
-            if (resData.clinicRecords) {
-              saveAllClinicRecordsMap(resData.clinicRecords);
-            }
-            return { success: true, count: resData.clinics?.length || cleanList.length };
           }
-        }
-      } catch (apiErr) {
-        console.warn('API Central /api/sync no disponible para push, usando respaldo GitHub:', apiErr);
-      }
+        }).catch(() => {
+          clearTimeout(timeoutId);
+        });
+      } catch (apiErr) {}
+
+      // =========================================================================
+      // CANAL 2: BÓVEDA PERMANENTE EN GITHUB (24/7 SIN REINICIOS NI PÉRDIDA)
+      // =========================================================================
 
       let lastError = '';
 
@@ -369,6 +427,9 @@ export function pushClinicsToCloud(clinicsToUpload?: ClinicAccount[], maxRetries
           // 1. Obtener el SHA actual y contenido remoto en GitHub para fusión multi-dispositivo
           let currentSha: string | null = null;
           let remoteClinics: ClinicAccount[] = [];
+          let remoteClinicRecords: { [clinicId: string]: any[] } = {};
+          let remoteClinicSettings: { [clinicId: string]: any } = {};
+          let remoteAdminContact: AdminContactInfo | null = null;
 
           try {
             const existingRes = await fetch(`${API_URL}?_t=${Date.now()}`, {
@@ -389,11 +450,36 @@ export function pushClinicsToCloud(clinicsToUpload?: ClinicAccount[], maxRetries
                 if (Array.isArray(parsed?.clinics)) {
                   remoteClinics = parsed.clinics;
                 }
+                if (parsed?.adminContact && typeof parsed.adminContact === 'object') {
+                  remoteAdminContact = parsed.adminContact;
+                }
+                if (parsed?.clinicRecords && typeof parsed.clinicRecords === 'object') {
+                  remoteClinicRecords = parsed.clinicRecords;
+                }
+                if (parsed?.clinicSettings && typeof parsed.clinicSettings === 'object') {
+                  remoteClinicSettings = parsed.clinicSettings;
+                }
               }
             }
           } catch (e) {}
 
-          // 2. FUSIÓN DISTRIBUIDA: Combinar remotos con locales para que ningún dispositivo pise a otro
+          // Si falta el SHA por cuestiones de caché, obtenerlo directamente
+          if (!currentSha) {
+            try {
+              const directShaRes = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}?ref=main&cb=${Date.now()}`, {
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Accept': 'application/vnd.github.v3+json'
+                }
+              });
+              if (directShaRes.ok) {
+                const d = await directShaRes.json();
+                if (d && d.sha) currentSha = d.sha;
+              }
+            } catch (e) {}
+          }
+
+          // 2. FUSIÓN DISTRIBUIDA DE CONSULTORIOS
           const mergedUploadMap = new Map<string, ClinicAccount>();
 
           // Primero incorporar lo que ya está en la nube
@@ -433,11 +519,50 @@ export function pushClinicsToCloud(clinicsToUpload?: ClinicAccount[], maxRetries
 
           const clinicsToCommit = Array.from(mergedUploadMap.values());
 
+          // 3. FUSIÓN DISTRIBUIDA DE EXPEDIENTES CLÍNICOS (PACIENTES)
+          const mergedClinicRecords: { [clinicId: string]: any[] } = { ...remoteClinicRecords };
+          for (const [cId, localRecs] of Object.entries(clinicRecords)) {
+            if (deletedIds.has(cId) || !Array.isArray(localRecs)) continue;
+            const existingRecs = Array.isArray(mergedClinicRecords[cId]) ? mergedClinicRecords[cId] : [];
+            const recMap = new Map<string, any>();
+            existingRecs.forEach(r => { if (r && r.id) recMap.set(r.id, r); });
+            localRecs.forEach(l => {
+              if (!l || !l.id) return;
+              if (!recMap.has(l.id)) {
+                recMap.set(l.id, l);
+              } else {
+                const ex = recMap.get(l.id);
+                const lTime = safeDateParse(l.updatedAt || l.createdAt);
+                const exTime = safeDateParse(ex.updatedAt || ex.createdAt);
+                if (lTime >= exTime) {
+                  recMap.set(l.id, { ...ex, ...l });
+                }
+              }
+            });
+            mergedClinicRecords[cId] = Array.from(recMap.values());
+          }
+
+          // 4. FUSIÓN DISTRIBUIDA DE CONFIGURACIONES DE CONSULTORIO
+          const mergedClinicSettings: { [clinicId: string]: any } = { ...remoteClinicSettings };
+          for (const [cId, localSet] of Object.entries(clinicSettings)) {
+            if (deletedIds.has(cId) || !localSet) continue;
+            mergedClinicSettings[cId] = { ...(mergedClinicSettings[cId] || {}), ...localSet };
+          }
+
+          // Fusionar Datos de Contacto de Administrador con Blindaje Inteligente
+          const adminContactToCommit = mergeAdminContacts(adminContact, remoteAdminContact);
+          if (JSON.stringify(adminContactToCommit) !== JSON.stringify(adminContact)) {
+            saveAdminContactInfo(adminContactToCommit, false);
+          }
+
           const payload = {
             superAdmin: 'Fernando01',
             updatedAt: new Date().toISOString(),
-            adminContact,
-            clinics: clinicsToCommit
+            adminContact: adminContactToCommit,
+            clinics: clinicsToCommit,
+            deletedClinicIds: Array.from(deletedIds),
+            clinicRecords: mergedClinicRecords,
+            clinicSettings: mergedClinicSettings
           };
 
           const jsonStr = JSON.stringify(payload, null, 2);
@@ -449,7 +574,7 @@ export function pushClinicsToCloud(clinicsToUpload?: ClinicAccount[], maxRetries
           const base64Content = btoa(binary);
 
           const putBody: any = {
-            message: `feat: Cross-device database cloud shield sync (${clinicsToCommit.length} clinics)`,
+            message: `feat: Cross-device database cloud shield sync (${clinicsToCommit.length} clinics, all records & settings)`,
             content: base64Content
           };
           if (currentSha) {
@@ -470,6 +595,8 @@ export function pushClinicsToCloud(clinicsToUpload?: ClinicAccount[], maxRetries
             localStorage.setItem(CLOUD_CACHE_TIMESTAMP_KEY, new Date().toISOString());
             saveAllClinics(clinicsToCommit, false);
             clinicsToCommit.forEach(c => initClinicDatabase(c));
+            saveAllClinicRecordsMap(mergedClinicRecords);
+            saveAllClinicSettingsMap(mergedClinicSettings);
             return { success: true, count: clinicsToCommit.length };
           }
 

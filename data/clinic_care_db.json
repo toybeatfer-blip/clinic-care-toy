@@ -1,6 +1,6 @@
 {
   "superAdmin": "Fernando01",
-  "updatedAt": "2026-09-04T03:08:15.462Z",
+  "updatedAt": "2026-09-04T03:33:19.905Z",
   "adminContact": {
     "adminName": "Fernando (Super Administrador)",
     "phoneWhatsApp": "55 1234 5678",
@@ -31,6 +31,29 @@
       "lastLoginAt": "2026-09-04T03:08:15.463Z",
       "licenseStatus": "active",
       "licenseValidUntil": "Indefinida"
+    },
+    {
+      "id": "clinic_dra_rivas_1788492799904",
+      "clinicName": "Consultorio Médico",
+      "doctorName": "Médico Responsable",
+      "prefix": "Dra.",
+      "cedulaGeneral": "632782",
+      "cedulaEspecialidad": "",
+      "especialidad": "Medicina General",
+      "universidad": "",
+      "username": "dra.rivas",
+      "passwordPlain": "1234",
+      "telefono": "",
+      "correo": "",
+      "direccion": "",
+      "sucursal": "",
+      "logoUrl": "",
+      "primaryColor": "sky",
+      "licenseStatus": "active",
+      "licenseValidUntil": "Indefinida",
+      "createdAt": "2026-09-04T03:33:19.904Z",
+      "updatedAt": "2026-09-04T03:33:19.905Z",
+      "lastLoginAt": "2026-09-04T03:33:19.905Z"
     }
   ],
   "deletedClinicIds": [],
