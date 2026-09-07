@@ -164,11 +164,16 @@ export const App: React.FC = () => {
 
       doSync();
       const interval = setInterval(doSync, 4000);
+      const handleVisibility = () => {
+        if (document.visibilityState === 'visible') doSync();
+      };
       window.addEventListener('focus', doSync);
+      document.addEventListener('visibilitychange', handleVisibility);
 
       return () => {
         clearInterval(interval);
         window.removeEventListener('focus', doSync);
+        document.removeEventListener('visibilitychange', handleVisibility);
       };
     }
   }, [session?.clinicId, session?.clinicAccount?.licenseStatus, session?.clinicAccount?.licenseValidUntil]);

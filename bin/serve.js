@@ -22,7 +22,7 @@ function loadDatabase() {
     updatedAt: new Date().toISOString(),
     adminContact: {
       adminName: 'Fernando (Super Administrador)',
-      phoneWhatsApp: '55 1234 5678',
+      phoneWhatsApp: '+52 474 1539891',
       email: 'toybeatfer@gmail.com',
       helpMessage: 'Para renovar tu licencia mensual o resolver dudas sobre tu cuenta de consultorio, comunícate directamente con el administrador del sistema.',
       updatedAt: '2026-01-01T00:00:00.000Z'
@@ -373,7 +373,9 @@ const requestHandler = (req, res) => {
     const contentType = MIME_TYPES[ext] || 'application/octet-stream';
 
     if (ext === '.html') {
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0, post-check=0, pre-check=0');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
     } else {
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     }
