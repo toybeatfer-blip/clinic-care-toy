@@ -1,6 +1,6 @@
 {
   "superAdmin": "Fernando01",
-  "updatedAt": "2026-09-08T07:30:38.484Z",
+  "updatedAt": "2026-09-08T07:30:53.171Z",
   "adminContact": {
     "adminName": "Fernando (Super Administrador)",
     "phoneWhatsApp": "+52 474 1539891",
@@ -9,29 +9,6 @@
     "updatedAt": "2026-09-04T23:33:42.713Z"
   },
   "clinics": [
-    {
-      "id": "45b62020-0d1b-4fe8-9a82-0c18076edd1f",
-      "clinicName": "Ndjdkdksl",
-      "username": "Admin",
-      "passwordPlain": "Admin123",
-      "doctorName": "Jose",
-      "prefix": "Dr.",
-      "cedulaGeneral": "618382",
-      "cedulaEspecialidad": "",
-      "especialidad": "Medicina General",
-      "universidad": "",
-      "telefono": "",
-      "correo": "",
-      "direccion": "",
-      "sucursal": "Centro",
-      "logoUrl": "",
-      "primaryColor": "sky",
-      "createdAt": "2026-09-04T23:35:06.685Z",
-      "updatedAt": "2026-09-04T23:35:06.685Z",
-      "lastLoginAt": "2026-09-04T23:35:06.685Z",
-      "licenseStatus": "active",
-      "licenseValidUntil": "2026-10-04"
-    },
     {
       "id": "clinic_dra_rivas_1788492799904",
       "clinicName": "Consultorio Médico",
@@ -65,7 +42,8 @@
     "940b3587-a27c-4a52-9d16-765a3d341cf1",
     "241e3318-5acb-4f3c-a433-12e03858c87c",
     "0c0235f1-6632-4ae0-8e1a-454dbe5667bd",
-    "6b6ce601-ee73-4832-84f5-34282ed882b9"
+    "6b6ce601-ee73-4832-84f5-34282ed882b9",
+    "45b62020-0d1b-4fe8-9a82-0c18076edd1f"
   ],
   "clinicRecords": {
     "clinic_dra_rivas_1788492799904": [
@@ -189,22 +167,6 @@
     ]
   },
   "clinicSettings": {
-    "45b62020-0d1b-4fe8-9a82-0c18076edd1f": {
-      "doctorName": "Jose",
-      "prefix": "Dr.",
-      "cedulaGeneral": "618382",
-      "cedulaEspecialidad": "",
-      "especialidad": "Medicina General",
-      "universidad": "",
-      "telefonoContacto": "",
-      "correoContacto": "",
-      "nombreClinica": "Ndjdkdksl",
-      "sucursal": "Centro",
-      "direccionClinica": "",
-      "telefonoClinica": "",
-      "logoUrl": "",
-      "primaryColor": "sky"
-    },
     "clinic_dra_rivas_1788492799904": {
       "doctorName": "Médico Responsable",
       "prefix": "Dra.",
