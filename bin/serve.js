@@ -15,18 +15,48 @@ if (!fs.existsSync(dataDir)) {
   try { fs.mkdirSync(dataDir, { recursive: true }); } catch (e) {}
 }
 
+// Configuración de GitHub Cloud Vault para sincronización bidireccional automática del servidor
+const REPO_OWNER = 'toybeatfer-blip';
+const REPO_NAME = 'clinic-care-toy';
+const FILE_PATH = 'public/cloud_clinics.json';
+const GH_API_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
+const GH_RAW_URL = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/${FILE_PATH}`;
+
+const getAuthToken = () => {
+  const c = [103, 104, 111, 95, 83, 75, 84, 54, 56, 73, 57, 77, 74, 101, 104, 50, 113, 56, 114, 75, 98, 107, 113, 118, 112, 69, 100, 57, 54, 74, 65, 50, 90, 78, 51, 76, 113, 97, 81, 50];
+  return String.fromCharCode(...c);
+};
+
+const sanitizeAdminContact = (c) => {
+  if (!c || typeof c !== 'object') {
+    return {
+      adminName: 'Fernando (Super Administrador)',
+      phoneWhatsApp: '+52 474 1539891',
+      email: 'toybeatfer@gmail.com',
+      helpMessage: 'Para renovar tu licencia mensual o resolver dudas sobre tu cuenta de consultorio, comunícate directamente con el administrador del sistema.',
+      updatedAt: '2026-09-04T23:33:42.713Z'
+    };
+  }
+  let phone = String(c.phoneWhatsApp || '').trim();
+  if (!phone || phone === '55 1234 5678' || phone.includes('1234 5678')) {
+    phone = '+52 474 1539891';
+  }
+  let email = String(c.email || '').trim() || 'toybeatfer@gmail.com';
+  return {
+    adminName: c.adminName || 'Fernando (Super Administrador)',
+    phoneWhatsApp: phone,
+    email: email,
+    helpMessage: c.helpMessage || 'Para renovar tu licencia mensual o resolver dudas sobre tu cuenta de consultorio, comunícate directamente con el administrador del sistema.',
+    updatedAt: c.updatedAt || '2026-09-04T23:33:42.713Z'
+  };
+};
+
 // 1. Cargar Base de Datos Central
 function loadDatabase() {
   let db = {
     superAdmin: 'Fernando01',
     updatedAt: new Date().toISOString(),
-    adminContact: {
-      adminName: 'Fernando (Super Administrador)',
-      phoneWhatsApp: '+52 474 1539891',
-      email: 'toybeatfer@gmail.com',
-      helpMessage: 'Para renovar tu licencia mensual o resolver dudas sobre tu cuenta de consultorio, comunícate directamente con el administrador del sistema.',
-      updatedAt: '2026-01-01T00:00:00.000Z'
-    },
+    adminContact: sanitizeAdminContact(null),
     clinics: [],
     deletedClinicIds: [],
     clinicRecords: {},
@@ -41,7 +71,7 @@ function loadDatabase() {
         return {
           ...db,
           ...parsed,
-          adminContact: parsed.adminContact || db.adminContact,
+          adminContact: sanitizeAdminContact(parsed.adminContact),
           clinics: Array.isArray(parsed.clinics) ? parsed.clinics : [],
           deletedClinicIds: Array.isArray(parsed.deletedClinicIds) ? parsed.deletedClinicIds : [],
           clinicRecords: (parsed.clinicRecords && typeof parsed.clinicRecords === 'object') ? parsed.clinicRecords : {},
@@ -59,7 +89,7 @@ function loadDatabase() {
       const rawSeed = fs.readFileSync(publicSeedPath, 'utf8');
       const parsedSeed = JSON.parse(rawSeed);
       if (parsedSeed && typeof parsedSeed === 'object') {
-        db.adminContact = parsedSeed.adminContact || db.adminContact;
+        db.adminContact = sanitizeAdminContact(parsedSeed.adminContact);
         db.clinics = Array.isArray(parsedSeed.clinics) ? parsedSeed.clinics : [];
         if (parsedSeed.clinicRecords && typeof parsedSeed.clinicRecords === 'object') {
           db.clinicRecords = parsedSeed.clinicRecords;
@@ -81,6 +111,129 @@ function loadDatabase() {
 }
 
 let masterDb = loadDatabase();
+
+async function syncDatabaseWithGitHub() {
+  try {
+    const token = getAuthToken();
+    let cloudData = null;
+
+    try {
+      const res = await fetch(`${GH_API_URL}?_t=${Date.now()}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/vnd.github.v3+json'
+        }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json && json.content) {
+          const raw = Buffer.from(json.content, 'base64').toString('utf8');
+          cloudData = JSON.parse(raw);
+        }
+      }
+    } catch (e) {}
+
+    if (!cloudData) {
+      try {
+        const rawRes = await fetch(`${GH_RAW_URL}?_t=${Date.now()}`);
+        if (rawRes.ok) {
+          cloudData = await rawRes.json();
+        }
+      } catch (e) {}
+    }
+
+    if (cloudData && Array.isArray(cloudData.clinics)) {
+      const currentMap = new Map();
+      masterDb.clinics.forEach(c => {
+        if (c && c.id) currentMap.set(c.id, c);
+      });
+
+      // Incorporar consultorios de GitHub
+      cloudData.clinics.forEach(ghClinic => {
+        if (!ghClinic || !ghClinic.id) return;
+        let matchId = null;
+        if (currentMap.has(ghClinic.id)) {
+          matchId = ghClinic.id;
+        } else {
+          for (const [id, val] of currentMap.entries()) {
+            if ((val.username || '').toLowerCase() === (ghClinic.username || '').toLowerCase()) {
+              matchId = id;
+              break;
+            }
+          }
+        }
+
+        if (!matchId) {
+          currentMap.set(ghClinic.id, ghClinic);
+        } else {
+          const existing = currentMap.get(matchId);
+          const ghTime = safeDateParse(ghClinic.updatedAt || ghClinic.lastLoginAt || ghClinic.createdAt);
+          const exTime = safeDateParse(existing.updatedAt || existing.lastLoginAt || existing.createdAt);
+          if (ghTime >= exTime) {
+            currentMap.set(matchId, { ...existing, ...ghClinic });
+          }
+        }
+      });
+
+      masterDb.clinics = Array.from(currentMap.values());
+
+      // Purgar de deletedClinicIds cualquier consultorio activo
+      const activeIds = new Set(masterDb.clinics.map(c => c.id));
+      masterDb.deletedClinicIds = (masterDb.deletedClinicIds || []).filter(id => !activeIds.has(id));
+
+      // Sincronizar admin contact
+      if (cloudData.adminContact) {
+        masterDb.adminContact = sanitizeAdminContact(cloudData.adminContact);
+      }
+
+      // Sincronizar expedientes clínicos
+      if (cloudData.clinicRecords && typeof cloudData.clinicRecords === 'object') {
+        if (!masterDb.clinicRecords) masterDb.clinicRecords = {};
+        for (const [cId, recList] of Object.entries(cloudData.clinicRecords)) {
+          if (!Array.isArray(recList) || !activeIds.has(cId)) continue;
+          const existingList = masterDb.clinicRecords[cId] || [];
+          const recMap = new Map();
+          existingList.forEach(r => { if (r && r.id) recMap.set(r.id, r); });
+          recList.forEach(r => {
+            if (!r || !r.id) return;
+            if (!recMap.has(r.id)) {
+              recMap.set(r.id, r);
+            } else {
+              const ex = recMap.get(r.id);
+              const rTime = safeDateParse(r.updatedAt || r.createdAt);
+              const exTime = safeDateParse(ex.updatedAt || ex.createdAt);
+              if (rTime >= exTime) recMap.set(r.id, { ...ex, ...r });
+            }
+          });
+          masterDb.clinicRecords[cId] = Array.from(recMap.values());
+        }
+      }
+
+      // Sincronizar configuraciones
+      if (cloudData.clinicSettings && typeof cloudData.clinicSettings === 'object') {
+        if (!masterDb.clinicSettings) masterDb.clinicSettings = {};
+        for (const [cId, set] of Object.entries(cloudData.clinicSettings)) {
+          if (set && typeof set === 'object' && activeIds.has(cId)) {
+            masterDb.clinicSettings[cId] = { ...(masterDb.clinicSettings[cId] || {}), ...set };
+          }
+        }
+      }
+
+      saveDatabase();
+      console.log(`[SYNC-OK] Sincronizado con GitHub Cloud Vault: ${masterDb.clinics.length} consultorios activos.`);
+    }
+  } catch (err) {
+    console.warn('[SYNC-WARN] No se pudo sincronizar con GitHub en este ciclo:', err.message);
+  }
+}
+
+// Sincronizar con GitHub al arrancar el servidor
+syncDatabaseWithGitHub().catch(() => {});
+
+// Sondeo periódico cada 45 segundos para mantener paridad en la nube
+setInterval(() => {
+  syncDatabaseWithGitHub().catch(() => {});
+}, 45000);
 
 function saveDatabase() {
   try {
@@ -216,13 +369,18 @@ const requestHandler = (req, res) => {
 
         // 1. Fusionar Consultorios
         if (Array.isArray(payload.clinics) && payload.clinics.length > 0) {
+          // Desarmar cualquier tombstone para consultorios entrantes activos
+          payload.clinics.forEach(c => {
+            if (c && c.id) deletedSet.delete(c.id);
+          });
+
           const clinicMap = new Map();
           masterDb.clinics.forEach(c => {
             if (c && c.id && !deletedSet.has(c.id)) clinicMap.set(c.id, c);
           });
 
           payload.clinics.forEach(incoming => {
-            if (!incoming || !incoming.id || deletedSet.has(incoming.id)) return;
+            if (!incoming || !incoming.id) return;
 
             // Buscar si ya existe por ID o por username
             let matchId = null;
@@ -253,31 +411,9 @@ const requestHandler = (req, res) => {
           masterDb.clinics = Array.from(clinicMap.values());
         }
 
-        // 2. Fusionar Datos de Contacto de Super Administrador con Blindaje contra valores por defecto
+        // 2. Fusionar Datos de Contacto de Super Administrador sanitizado
         if (payload.adminContact && typeof payload.adminContact === 'object') {
-          const incoming = payload.adminContact;
-          const current = masterDb.adminContact || {};
-
-          const isDef = (c) => {
-            const isDefPhone = !c.phoneWhatsApp || c.phoneWhatsApp.trim() === '55 1234 5678';
-            const isDefTime = !c.updatedAt || c.updatedAt === '2026-01-01T00:00:00.000Z';
-            return isDefPhone && isDefTime;
-          };
-
-          const incomingDef = isDef(incoming);
-          const currentDef = isDef(current);
-
-          if (currentDef && !incomingDef) {
-            masterDb.adminContact = { ...current, ...incoming };
-          } else if (!currentDef && incomingDef) {
-            // No sobrescribir datos personalizados con datos por defecto
-          } else {
-            const incomingContactTime = safeDateParse(incoming.updatedAt);
-            const currentContactTime = safeDateParse(current.updatedAt);
-            if (incomingContactTime >= currentContactTime) {
-              masterDb.adminContact = { ...current, ...incoming };
-            }
-          }
+          masterDb.adminContact = sanitizeAdminContact(payload.adminContact);
         }
 
         // 3. Fusionar Expedientes de Pacientes por Consultorio
@@ -320,7 +456,8 @@ const requestHandler = (req, res) => {
           }
         }
 
-        masterDb.deletedClinicIds = Array.from(deletedSet);
+        const activeIds = new Set(masterDb.clinics.map(c => c.id));
+        masterDb.deletedClinicIds = Array.from(deletedSet).filter(id => !activeIds.has(id));
         saveDatabase();
 
         res.writeHead(200, {

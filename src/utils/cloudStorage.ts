@@ -5,6 +5,7 @@ import {
   getAdminContactInfo,
   saveAdminContactInfo,
   getDeletedClinicIds,
+  removeDeletedClinicId,
   cleanMojibake,
   initClinicDatabase,
   getAllClinicRecordsMap,
@@ -29,11 +30,32 @@ const getAuthToken = (): string => {
   return String.fromCharCode(...c);
 };
 
+// URL central de sincronización unificada para todos los dispositivos
+export const getCentralApiUrl = (): string => {
+  if (typeof window !== 'undefined') {
+    if (window.location.origin && window.location.origin.includes('onrender.com')) {
+      return `${window.location.origin}/api/sync`;
+    }
+    if (window.location.port === '3000') {
+      return '/api/sync';
+    }
+  }
+  return 'https://clinic-care-toy.onrender.com/api/sync';
+};
+
 const CLOUD_CACHE_TIMESTAMP_KEY = 'clinic_care_cloud_last_synced_v2';
 
 let activePullPromise: Promise<{ success: boolean; count: number; error?: string }> | null = null;
 let activePushPromise: Promise<{ success: boolean; count?: number; error?: string }> | null = null;
 let pendingPushClinics: ClinicAccount[] | null = null;
+
+let pushDebounceTimer: any = null;
+export function debouncedPushClinicsToCloud(delayMs: number = 1500): void {
+  if (pushDebounceTimer) clearTimeout(pushDebounceTimer);
+  pushDebounceTimer = setTimeout(() => {
+    pushClinicsToCloud().catch(() => {});
+  }, delayMs);
+}
 
 // Decodificar Base64 en UTF-8 seguro
 function decodeBase64Utf8(base64: string): string {
@@ -64,7 +86,7 @@ export function mergeAdminContacts(local: AdminContactInfo, remote?: AdminContac
   if (!local || typeof local !== 'object') return remote;
 
   const isDefault = (c: AdminContactInfo) => {
-    const isDefPhone = !c.phoneWhatsApp || c.phoneWhatsApp.trim() === '55 1234 5678';
+    const isDefPhone = !c.phoneWhatsApp || c.phoneWhatsApp.trim() === '55 1234 5678' || c.phoneWhatsApp.includes('1234 5678');
     const isDefTime = !c.updatedAt || c.updatedAt === '2026-01-01T00:00:00.000Z';
     return isDefPhone && isDefTime;
   };
@@ -83,7 +105,7 @@ export function mergeAdminContacts(local: AdminContactInfo, remote?: AdminContac
   return remoteTime > localTime ? remote : local;
 }
 
-// 1. Descargar Consultorios DESDE la Nube (Pull con Protección Anti-Borrado y Sincronización Bidireccional)
+// 1. Descargar Consultorios DESDE la Nube (Pull Paralelo Anti Split-Brain y Blindaje Multi-Dispositivo)
 export function pullClinicsFromCloud(): Promise<{ success: boolean; count: number; error?: string }> {
   if (activePullPromise) {
     return activePullPromise;
@@ -91,238 +113,257 @@ export function pullClinicsFromCloud(): Promise<{ success: boolean; count: numbe
 
   activePullPromise = (async () => {
     try {
-      let remoteList: ClinicAccount[] = [];
-      let remoteAdminContact: AdminContactInfo | null = null;
-      let remoteClinicRecords: { [clinicId: string]: any[] } | null = null;
-      let remoteClinicSettings: { [clinicId: string]: any } | null = null;
-      let remoteDeletedIds: string[] = [];
-      let fetchedOk = false;
+      const centralUrl = getCentralApiUrl();
+      const token = getAuthToken();
 
-      // 1. PRIORIDAD 1: API Central en Tiempo Real (/api/sync) en Render / Local
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 6000);
-        const apiRes = await fetch(`/api/sync?_t=${Date.now()}`, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-            'Cache-Control': 'no-cache, no-store, must-revalidate'
-          },
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-
-        if (apiRes.ok) {
-          const contentType = apiRes.headers.get('content-type') || '';
-          if (contentType.includes('application/json')) {
-            const apiData = await apiRes.json();
-            if (apiData && apiData.success) {
-              if (Array.isArray(apiData.clinics)) remoteList = apiData.clinics;
-              if (apiData.adminContact && typeof apiData.adminContact === 'object') remoteAdminContact = apiData.adminContact;
-              if (apiData.clinicRecords && typeof apiData.clinicRecords === 'object') remoteClinicRecords = apiData.clinicRecords;
-              if (apiData.clinicSettings && typeof apiData.clinicSettings === 'object') remoteClinicSettings = apiData.clinicSettings;
-              if (Array.isArray(apiData.deletedClinicIds)) remoteDeletedIds = apiData.deletedClinicIds;
-              fetchedOk = true;
-            }
-          }
-        }
-      } catch (apiErr) {
-        console.warn('API Central /api/sync no disponible, intentando GitHub Cloud Vault:', apiErr);
-      }
-
-      // 2. RESPALDO SECUNDARIO: API Directa de GitHub en tiempo real
-      if (!fetchedOk) {
-        try {
-          const token = getAuthToken();
-          const ghRes = await fetch(`${API_URL}?_t=${Date.now()}`, {
+      // Consultar Render Y GitHub EN PARALELO con Promise.allSettled para evitar split-brain
+      const [renderRes, ghRes] = await Promise.allSettled([
+        // Canal 1: API Central Render (/api/sync)
+        (async () => {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 7000);
+          const res = await fetch(`${centralUrl}?_t=${Date.now()}`, {
             method: 'GET',
             headers: {
-              'Authorization': `Bearer ${token}`,
-              'Accept': 'application/vnd.github.v3+json',
-              'Cache-Control': 'no-cache'
-            }
+              'Accept': 'application/json',
+              'Cache-Control': 'no-cache, no-store, must-revalidate'
+            },
+            signal: controller.signal
           });
+          clearTimeout(timeoutId);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const json = await res.json();
+          if (!json || !json.success) throw new Error('Render sync failed');
+          return json;
+        })(),
 
-          if (ghRes.ok) {
-            const ghData = await ghRes.json();
-            if (ghData && ghData.content) {
-              const jsonText = decodeBase64Utf8(ghData.content);
-              const parsed = JSON.parse(jsonText);
-              if (Array.isArray(parsed?.clinics)) {
-                remoteList = parsed.clinics;
-                remoteAdminContact = parsed.adminContact || null;
-                if (parsed.clinicRecords && typeof parsed.clinicRecords === 'object') {
-                  remoteClinicRecords = parsed.clinicRecords;
-                }
-                if (parsed.clinicSettings && typeof parsed.clinicSettings === 'object') {
-                  remoteClinicSettings = parsed.clinicSettings;
-                }
-                if (Array.isArray(parsed.deletedClinicIds)) {
-                  remoteDeletedIds = parsed.deletedClinicIds;
-                }
-                fetchedOk = true;
+        // Canal 2: Bóveda GitHub Cloud Vault
+        (async () => {
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 7000);
+            const res = await fetch(`${API_URL}?_t=${Date.now()}`, {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/vnd.github.v3+json',
+                'Cache-Control': 'no-cache'
+              },
+              signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            if (res.ok) {
+              const data = await res.json();
+              if (data && data.content) {
+                const text = decodeBase64Utf8(data.content);
+                const parsed = JSON.parse(text);
+                if (parsed && Array.isArray(parsed.clinics)) return parsed;
               }
             }
-          }
-        } catch (apiErr) {
-          console.warn('GitHub API pull falló:', apiErr);
-        }
-      }
+          } catch (e) {}
 
-      // 3. RESPALDO TERCIARIO: RAW_URL con timestamp antibuf
-      if (!fetchedOk) {
-        try {
+          // Fallback a GitHub RAW
           const rawRes = await fetch(`${RAW_URL}?_t=${Date.now()}`, {
-            method: 'GET',
             headers: { 'Accept': 'application/json', 'Cache-Control': 'no-cache' }
           });
           if (rawRes.ok) {
             const rawData = await rawRes.json();
-            if (Array.isArray(rawData?.clinics)) {
-              remoteList = rawData.clinics;
-              remoteAdminContact = rawData.adminContact || null;
-              if (rawData.clinicRecords && typeof rawData.clinicRecords === 'object') {
-                remoteClinicRecords = rawData.clinicRecords;
-              }
-              if (rawData.clinicSettings && typeof rawData.clinicSettings === 'object') {
-                remoteClinicSettings = rawData.clinicSettings;
-              }
-              if (Array.isArray(rawData.deletedClinicIds)) {
-                remoteDeletedIds = rawData.deletedClinicIds;
-              }
-              fetchedOk = true;
-            }
+            if (rawData && Array.isArray(rawData.clinics)) return rawData;
           }
-        } catch (rawErr) {
-          console.warn('RAW pull falló:', rawErr);
-        }
+          throw new Error('GitHub sync failed');
+        })()
+      ]);
+
+      const candidateLists: ClinicAccount[][] = [];
+      const candidateRecords: { [cId: string]: any[] }[] = [];
+      const candidateSettings: { [cId: string]: any }[] = [];
+      const candidateAdminContacts: AdminContactInfo[] = [];
+      let remoteFetchedAny = false;
+
+      if (renderRes.status === 'fulfilled' && renderRes.value) {
+        remoteFetchedAny = true;
+        const d = renderRes.value;
+        if (Array.isArray(d.clinics)) candidateLists.push(d.clinics);
+        if (d.clinicRecords && typeof d.clinicRecords === 'object') candidateRecords.push(d.clinicRecords);
+        if (d.clinicSettings && typeof d.clinicSettings === 'object') candidateSettings.push(d.clinicSettings);
+        if (d.adminContact && typeof d.adminContact === 'object') candidateAdminContacts.push(d.adminContact);
+      }
+
+      if (ghRes.status === 'fulfilled' && ghRes.value) {
+        remoteFetchedAny = true;
+        const d = ghRes.value;
+        if (Array.isArray(d.clinics)) candidateLists.push(d.clinics);
+        if (d.clinicRecords && typeof d.clinicRecords === 'object') candidateRecords.push(d.clinicRecords);
+        if (d.clinicSettings && typeof d.clinicSettings === 'object') candidateSettings.push(d.clinicSettings);
+        if (d.adminContact && typeof d.adminContact === 'object') candidateAdminContacts.push(d.adminContact);
       }
 
       const deletedIds = getDeletedClinicIds();
-      if (remoteDeletedIds && remoteDeletedIds.length > 0) {
-        remoteDeletedIds.forEach(id => deletedIds.add(id));
-      }
 
+      // CRÍTICO: Cualquier consultorio presente en cualquiera de las nubes ESTÁ ACTIVO.
+      // Purgar inmediatamente cualquier tombstone obsoleto de deletedIds.
+      candidateLists.forEach(list => {
+        list.forEach(c => {
+          if (c && c.id) {
+            deletedIds.delete(c.id);
+            removeDeletedClinicId(c.id);
+          }
+        });
+      });
+
+      // 1. Fusionar fuentes remotas
+      const remoteMergedMap = new Map<string, ClinicAccount>();
+
+      candidateLists.forEach(list => {
+        list.forEach(rawR => {
+          if (!rawR || !rawR.id) return;
+          const r: ClinicAccount = {
+            ...rawR,
+            clinicName: cleanMojibake(rawR.clinicName) || 'Consultorio Médico',
+            doctorName: cleanMojibake(rawR.doctorName) || 'Médico Responsable',
+            prefix: rawR.prefix || 'Dr.',
+            cedulaGeneral: cleanMojibake(rawR.cedulaGeneral),
+            cedulaEspecialidad: cleanMojibake(rawR.cedulaEspecialidad),
+            especialidad: cleanMojibake(rawR.especialidad) || 'Medicina General',
+            universidad: cleanMojibake(rawR.universidad),
+            telefono: cleanMojibake(rawR.telefono),
+            correo: cleanMojibake(rawR.correo),
+            direccion: cleanMojibake(rawR.direccion),
+            sucursal: cleanMojibake(rawR.sucursal)
+          };
+
+          let matchKey: string | null = null;
+          if (remoteMergedMap.has(r.id)) {
+            matchKey = r.id;
+          } else {
+            for (const [k, val] of remoteMergedMap.entries()) {
+              if ((val.username || '').toLowerCase() === (r.username || '').toLowerCase()) {
+                matchKey = k;
+                break;
+              }
+            }
+          }
+
+          if (!matchKey) {
+            remoteMergedMap.set(r.id, r);
+          } else {
+            const ex = remoteMergedMap.get(matchKey)!;
+            const rTime = safeDateParse(r.updatedAt || r.lastLoginAt || r.createdAt);
+            const exTime = safeDateParse(ex.updatedAt || ex.lastLoginAt || ex.createdAt);
+            if (rTime >= exTime) {
+              remoteMergedMap.set(matchKey, { ...ex, ...r });
+            }
+          }
+        });
+      });
+
+      // 2. Fusionar con datos locales (deep scan, local list, IndexedDB)
       const { clinics: deepList } = await deepScanAllClinics();
       const localList = getAllClinics();
       const idbList = await idbGetClinics();
 
-      const mergedMap = new Map<string, ClinicAccount>();
+      const finalMap = new Map<string, ClinicAccount>();
 
-      // 1. Cargar escaneo profundo primero (rescata consultorios atrapados en la memoria del celular o PC)
-      deepList.forEach(c => {
+      [...deepList, ...localList, ...idbList].forEach(c => {
         if (c && c.id && !deletedIds.has(c.id)) {
-          mergedMap.set(c.id, c);
+          finalMap.set(c.id, c);
         }
       });
 
-      // 2. Cargar locales
-      localList.forEach(c => {
-        if (c && c.id && !deletedIds.has(c.id)) {
-          mergedMap.set(c.id, c);
-        }
-      });
-
-      // 3. Cargar IndexedDB
-      idbList.forEach(c => {
-        if (c && c.id && !deletedIds.has(c.id)) {
-          if (!mergedMap.has(c.id)) {
-            mergedMap.set(c.id, c);
-          }
-        }
-      });
-
-      // Fusionar remotos respetando el registro más reciente y limpiando mojibake
-      if (fetchedOk && remoteList.length > 0) {
-        remoteList.forEach(rawR => {
-          if (rawR && rawR.id && !deletedIds.has(rawR.id)) {
-            const r: ClinicAccount = {
-              ...rawR,
-              clinicName: cleanMojibake(rawR.clinicName) || 'Consultorio Médico',
-              doctorName: cleanMojibake(rawR.doctorName) || 'Médico Responsable',
-              prefix: rawR.prefix || 'Dr.',
-              cedulaGeneral: cleanMojibake(rawR.cedulaGeneral),
-              cedulaEspecialidad: cleanMojibake(rawR.cedulaEspecialidad),
-              especialidad: cleanMojibake(rawR.especialidad) || 'Medicina General',
-              universidad: cleanMojibake(rawR.universidad),
-              telefono: cleanMojibake(rawR.telefono),
-              correo: cleanMojibake(rawR.correo),
-              direccion: cleanMojibake(rawR.direccion),
-              sucursal: cleanMojibake(rawR.sucursal)
-            };
-
-            // Buscar si existe por ID o por username coincidente
-            let existingKey: string | null = null;
-            if (mergedMap.has(r.id)) {
-              existingKey = r.id;
-            } else {
-              for (const [k, val] of mergedMap.entries()) {
-                if (val.username.toLowerCase() === r.username.toLowerCase()) {
-                  existingKey = k;
-                  break;
-                }
-              }
-            }
-
-            if (!existingKey) {
-              mergedMap.set(r.id, r);
-            } else {
-              const local = mergedMap.get(existingKey)!;
-              const remoteTime = safeDateParse(r.updatedAt || r.lastLoginAt || r.createdAt);
-              const localTime = safeDateParse(local.updatedAt || local.lastLoginAt || local.createdAt);
-
-              if (remoteTime >= localTime) {
-                mergedMap.set(existingKey, { ...local, ...r });
-              }
+      for (const [remId, remClinic] of remoteMergedMap.entries()) {
+        let localKey: string | null = null;
+        if (finalMap.has(remId)) {
+          localKey = remId;
+        } else {
+          for (const [k, val] of finalMap.entries()) {
+            if ((val.username || '').toLowerCase() === (remClinic.username || '').toLowerCase()) {
+              localKey = k;
+              break;
             }
           }
-        });
+        }
+
+        if (!localKey) {
+          finalMap.set(remId, remClinic);
+        } else {
+          const loc = finalMap.get(localKey)!;
+          const remTime = safeDateParse(remClinic.updatedAt || remClinic.lastLoginAt || remClinic.createdAt);
+          const locTime = safeDateParse(loc.updatedAt || loc.lastLoginAt || loc.createdAt);
+          if (remTime >= locTime) {
+            finalMap.set(localKey, { ...loc, ...remClinic });
+          }
+        }
       }
 
-      const finalList = Array.from(mergedMap.values());
-      
+      const finalList = Array.from(finalMap.values());
       saveAllClinics(finalList, false);
       finalList.forEach(c => initClinicDatabase(c));
       await idbSaveClinics(finalList);
 
-      // Sincronizar datos de contacto del Administrador con Blindaje Inteligente
-      if (remoteAdminContact && typeof remoteAdminContact === 'object') {
-        const localContact = getAdminContactInfo();
-        const mergedContact = mergeAdminContacts(localContact, remoteAdminContact);
-        if (JSON.stringify(mergedContact) !== JSON.stringify(localContact)) {
-          saveAdminContactInfo(mergedContact, false);
-        }
-        if (JSON.stringify(mergedContact) !== JSON.stringify(remoteAdminContact)) {
-          setTimeout(() => pushClinicsToCloud().catch(() => {}), 100);
-        }
-      }
+      // 3. Fusionar expedientes clínicos de pacientes
+      const localRecordsMap = getAllClinicRecordsMap();
+      const mergedRecordsMap: { [cId: string]: any[] } = { ...localRecordsMap };
 
-      // Sincronizar expedientes clínicos de pacientes
-      if (remoteClinicRecords && typeof remoteClinicRecords === 'object') {
-        saveAllClinicRecordsMap(remoteClinicRecords);
-      }
+      candidateRecords.forEach(recordsObj => {
+        for (const [cId, recs] of Object.entries(recordsObj)) {
+          if (!Array.isArray(recs) || deletedIds.has(cId)) continue;
+          const current = mergedRecordsMap[cId] || [];
+          const recMap = new Map<string, any>();
+          current.forEach(r => { if (r && r.id) recMap.set(r.id, r); });
+          recs.forEach(r => {
+            if (!r || !r.id) return;
+            if (!recMap.has(r.id)) {
+              recMap.set(r.id, r);
+            } else {
+              const ex = recMap.get(r.id);
+              const rTime = safeDateParse(r.updatedAt || r.createdAt);
+              const exTime = safeDateParse(ex.updatedAt || ex.createdAt);
+              if (rTime >= exTime) {
+                recMap.set(r.id, { ...ex, ...r });
+              }
+            }
+          });
+          mergedRecordsMap[cId] = Array.from(recMap.values());
+        }
+      });
+      saveAllClinicRecordsMap(mergedRecordsMap);
 
-      // Sincronizar configuraciones de consultorios (logos, membretes, especialidades)
-      if (remoteClinicSettings && typeof remoteClinicSettings === 'object') {
-        saveAllClinicSettingsMap(remoteClinicSettings);
-      }
+      // 4. Fusionar configuraciones de consultorios
+      const localSettingsMap = getAllClinicSettingsMap();
+      const mergedSettingsMap: { [cId: string]: any } = { ...localSettingsMap };
+
+      candidateSettings.forEach(setObj => {
+        for (const [cId, settings] of Object.entries(setObj)) {
+          if (settings && typeof settings === 'object' && !deletedIds.has(cId)) {
+            mergedSettingsMap[cId] = { ...(mergedSettingsMap[cId] || {}), ...settings };
+          }
+        }
+      });
+      saveAllClinicSettingsMap(mergedSettingsMap);
+
+      // 5. Fusionar datos de contacto de Super Administrador con blindaje inteligente
+      let finalAdminContact = getAdminContactInfo();
+      candidateAdminContacts.forEach(ac => {
+        finalAdminContact = mergeAdminContacts(finalAdminContact, ac);
+      });
+      saveAdminContactInfo(finalAdminContact, false);
 
       localStorage.setItem(CLOUD_CACHE_TIMESTAMP_KEY, new Date().toISOString());
 
-      // BLINDAJE Y SINCRONIZACIÓN BIDIRECCIONAL:
-      // Si la máquina local contiene consultorios, expedientes o configuraciones que la nube no tenía,
-      // subirlos inmediatamente a la nube para que cualquier otro dispositivo los tenga al instante.
-      if (fetchedOk) {
-        const remoteIdSet = new Set(remoteList.map(r => r.id));
-        const remoteUserSet = new Set(remoteList.map(r => (r.username || '').toLowerCase()));
-        const hasMissingClinics = finalList.some(l => !remoteIdSet.has(l.id) && !remoteUserSet.has((l.username || '').toLowerCase()));
-        
-        const localRecordsMap = getAllClinicRecordsMap();
-        const hasLocalRecords = Object.keys(localRecordsMap).length > 0;
-        const remoteRecordsEmpty = !remoteClinicRecords || Object.keys(remoteClinicRecords).length === 0;
+      // 6. BLINDAJE DE PARIDAD MULTI-DISPOSITIVO:
+      // Si Render o GitHub tenían menos consultorios que el resultado fusionado,
+      // sincronizar el estado completo a ambos de inmediato para que ningún dispositivo
+      // quede con datos desactualizados.
+      if (remoteFetchedAny) {
+        const renderCount = (renderRes.status === 'fulfilled' && Array.isArray(renderRes.value?.clinics))
+          ? renderRes.value.clinics.length
+          : -1;
+        const ghCount = (ghRes.status === 'fulfilled' && Array.isArray(ghRes.value?.clinics))
+          ? ghRes.value.clinics.length
+          : -1;
 
-        if (hasMissingClinics || (hasLocalRecords && remoteRecordsEmpty) || (remoteList.length === 0 && finalList.length > 0)) {
-          console.log('☁️ Sincronización bidireccional activa: Subiendo datos locales completos a la nube...');
+        if (renderCount !== finalList.length || ghCount !== finalList.length) {
+          console.log(`☁️ Paridad Multi-Dispositivo: Sincronizando datos unificados (Render: ${renderCount}, GitHub: ${ghCount}, Fusionado: ${finalList.length})...`);
           pushClinicsToCloud(finalList).catch(() => {});
         }
       }
@@ -349,6 +390,15 @@ export function pushClinicsToCloud(clinicsToUpload?: ClinicAccount[], maxRetries
     try {
       const list = clinicsToUpload || getAllClinics();
       const deletedIds = getDeletedClinicIds();
+
+      // Desarmar cualquier tombstone para consultorios que se están guardando/subiendo
+      list.forEach(c => {
+        if (c && c.id && deletedIds.has(c.id)) {
+          deletedIds.delete(c.id);
+          removeDeletedClinicId(c.id);
+        }
+      });
+
       const cleanList = list
         .filter(c => !deletedIds.has(c.id))
         .map(c => ({
@@ -379,20 +429,24 @@ export function pushClinicsToCloud(clinicsToUpload?: ClinicAccount[], maxRetries
       // CANAL 1: Servidor Render en Tiempo Real (/api/sync)
       // =========================================================================
       try {
+        const centralUrl = getCentralApiUrl();
+        const activeIds = new Set(cleanList.map(c => c.id));
+        const safeDeletedClinicIds = Array.from(deletedIds).filter(dId => !activeIds.has(dId));
+
         const payload = {
           superAdmin: 'Fernando01',
           updatedAt: new Date().toISOString(),
           clinics: cleanList,
           adminContact,
-          deletedClinicIds: Array.from(deletedIds),
+          deletedClinicIds: safeDeletedClinicIds,
           clinicRecords,
           clinicSettings
         };
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-        fetch('/api/sync', {
+        fetch(centralUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -555,12 +609,20 @@ export function pushClinicsToCloud(clinicsToUpload?: ClinicAccount[], maxRetries
             saveAdminContactInfo(adminContactToCommit, false);
           }
 
+          // Desarmar cualquier tombstone para consultorios presentes en clinicsToCommit
+          const activeCommitIds = new Set(clinicsToCommit.map(c => c.id));
+          activeCommitIds.forEach(id => {
+            deletedIds.delete(id);
+            removeDeletedClinicId(id);
+          });
+          const safeDeletedIdsForCommit = Array.from(deletedIds).filter(id => !activeCommitIds.has(id));
+
           const payload = {
             superAdmin: 'Fernando01',
             updatedAt: new Date().toISOString(),
             adminContact: adminContactToCommit,
             clinics: clinicsToCommit,
-            deletedClinicIds: Array.from(deletedIds),
+            deletedClinicIds: safeDeletedIdsForCommit,
             clinicRecords: mergedClinicRecords,
             clinicSettings: mergedClinicSettings
           };

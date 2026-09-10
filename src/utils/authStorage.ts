@@ -118,6 +118,34 @@ export function addDeletedClinicId(id: string): void {
   } catch (e) {}
 }
 
+export function removeDeletedClinicId(id: string): void {
+  try {
+    const set = getDeletedClinicIds();
+    if (set.has(id)) {
+      set.delete(id);
+      localStorage.setItem(DELETED_CLINICS_KEY, JSON.stringify(Array.from(set)));
+    }
+  } catch (e) {}
+}
+
+const DEFAULT_SUPERADMIN_PHONE = '+52 474 1539891';
+const DEFAULT_SUPERADMIN_EMAIL = 'toybeatfer@gmail.com';
+
+function sanitizeAdminContact(c: Partial<AdminContactInfo>): AdminContactInfo {
+  let phone = cleanMojibake(c.phoneWhatsApp) || '';
+  if (!phone || phone.trim() === '55 1234 5678' || phone.includes('1234 5678')) {
+    phone = DEFAULT_SUPERADMIN_PHONE;
+  }
+  let email = cleanMojibake(c.email) || DEFAULT_SUPERADMIN_EMAIL;
+  return {
+    adminName: cleanMojibake(c.adminName) || 'Fernando (Super Administrador)',
+    phoneWhatsApp: phone,
+    email: email,
+    helpMessage: cleanMojibake(c.helpMessage) || 'Para renovar tu licencia mensual o resolver dudas sobre tu cuenta de consultorio, comunícate directamente con el administrador del sistema.',
+    updatedAt: c.updatedAt || '2026-09-04T23:33:42.713Z'
+  };
+}
+
 // 1. DATOS DE CONTACTO DEL ADMINISTRADOR
 export function getAdminContactInfo(): AdminContactInfo {
   try {
@@ -125,13 +153,7 @@ export function getAdminContactInfo(): AdminContactInfo {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === 'object') {
-        return {
-          adminName: cleanMojibake(parsed.adminName) || 'Fernando (Super Administrador)',
-          phoneWhatsApp: cleanMojibake(parsed.phoneWhatsApp) || '55 1234 5678',
-          email: cleanMojibake(parsed.email) || 'toybeatfer@gmail.com',
-          helpMessage: cleanMojibake(parsed.helpMessage) || 'Para renovar tu licencia mensual o resolver dudas sobre tu cuenta de consultorio, comunícate directamente con el administrador del sistema.',
-          updatedAt: parsed.updatedAt || '2026-01-01T00:00:00.000Z'
-        };
+        return sanitizeAdminContact(parsed);
       }
     }
   } catch (e) {
@@ -139,22 +161,19 @@ export function getAdminContactInfo(): AdminContactInfo {
   }
   return {
     adminName: 'Fernando (Super Administrador)',
-    phoneWhatsApp: '55 1234 5678',
-    email: 'toybeatfer@gmail.com',
+    phoneWhatsApp: DEFAULT_SUPERADMIN_PHONE,
+    email: DEFAULT_SUPERADMIN_EMAIL,
     helpMessage: 'Para renovar tu licencia mensual o resolver dudas sobre tu cuenta de consultorio, comunícate directamente con el administrador del sistema.',
-    updatedAt: '2026-01-01T00:00:00.000Z'
+    updatedAt: '2026-09-04T23:33:42.713Z'
   };
 }
 
 export function saveAdminContactInfo(info: AdminContactInfo, syncToCloud: boolean = true): void {
   try {
-    const freshInfo: AdminContactInfo = {
-      adminName: cleanMojibake(info.adminName) || 'Fernando (Super Administrador)',
-      phoneWhatsApp: cleanMojibake(info.phoneWhatsApp) || '55 1234 5678',
-      email: cleanMojibake(info.email) || 'toybeatfer@gmail.com',
-      helpMessage: cleanMojibake(info.helpMessage) || '',
+    const freshInfo = sanitizeAdminContact({
+      ...info,
       updatedAt: syncToCloud ? new Date().toISOString() : (info.updatedAt || new Date().toISOString())
-    };
+    });
     localStorage.setItem(ADMIN_CONTACT_KEY, JSON.stringify(freshInfo));
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent(ADMIN_CONTACT_EVENT, { detail: freshInfo }));
@@ -417,6 +436,13 @@ export function getAllClinics(): ClinicAccount[] {
 export function saveAllClinics(clinics: ClinicAccount[], syncToCloud: boolean = true): void {
   try {
     const deletedIds = getDeletedClinicIds();
+    // Si una clínica viene en la lista de guardado, está viva: desarmar cualquier tombstone obsoleto
+    clinics.forEach(c => {
+      if (c && c.id && deletedIds.has(c.id)) {
+        deletedIds.delete(c.id);
+        removeDeletedClinicId(c.id);
+      }
+    });
     const cleanList = clinics.filter(c => !deletedIds.has(c.id));
     
     // Guardar en almacenamiento principal y en bóveda redundante
@@ -484,9 +510,12 @@ export function registerClinic(data: Omit<ClinicAccount, 'id' | 'createdAt' | 'l
   }
 
   const nowStr = new Date().toISOString();
+  const newId = generateUUID();
+  removeDeletedClinicId(newId);
+
   const newClinic: ClinicAccount = {
     ...data,
-    id: generateUUID(),
+    id: newId,
     username: data.username.trim(),
     createdAt: nowStr,
     updatedAt: nowStr,
@@ -503,6 +532,7 @@ export function registerClinic(data: Omit<ClinicAccount, 'id' | 'createdAt' | 'l
 }
 
 export function updateClinic(clinicId: string, updates: Partial<ClinicAccount>): ClinicAccount[] {
+  removeDeletedClinicId(clinicId);
   const clinics = getAllClinics();
   const nowStr = new Date().toISOString();
   const next = clinics.map(c => {

@@ -48,8 +48,8 @@ export const SuspendedLicenseNoticeModal: React.FC<SuspendedLicenseNoticeModalPr
 
   if (!isOpen) return null;
 
-  const phoneStr = (admin && admin.phoneWhatsApp) ? String(admin.phoneWhatsApp) : '55 1234 5678';
-  const cleanPhone = phoneStr.replace(/\D/g, '') || '525512345678';
+  const phoneStr = (admin && admin.phoneWhatsApp && admin.phoneWhatsApp !== '55 1234 5678') ? String(admin.phoneWhatsApp) : '+52 474 1539891';
+  const cleanPhone = phoneStr.replace(/\D/g, '') || '524741539891';
   const formattedWaPhone = cleanPhone.startsWith('52') ? cleanPhone : `52${cleanPhone}`;
   const adminEmail = (admin && admin.email) ? String(admin.email) : 'toybeatfer@gmail.com';
   const adminName = (admin && admin.adminName) ? String(admin.adminName) : 'Fernando (Super Administrador)';

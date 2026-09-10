@@ -18,7 +18,7 @@ import {
   MessageCircle,
   Clock
 } from 'lucide-react';
-import { authenticateUser, registerClinic, getAdminContactInfo } from '../utils/authStorage';
+import { authenticateUser, registerClinic, getAdminContactInfo, CLINICS_UPDATED_EVENT } from '../utils/authStorage';
 import { pullClinicsFromCloud, pushClinicsToCloud } from '../utils/cloudStorage';
 import { SessionUser } from '../types';
 import { SuspendedLicenseNoticeModal } from './SuspendedLicenseNoticeModal';
@@ -62,21 +62,38 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
 
   // Sincronización automática con la nube al abrir la pantalla y en tiempo real
   useEffect(() => {
-    pullClinicsFromCloud().catch(() => {});
+    const doSync = () => {
+      pullClinicsFromCloud().then(() => {
+        setAdminInfo(getAdminContactInfo());
+      }).catch(() => {});
+    };
 
-    const interval = setInterval(() => {
-      pullClinicsFromCloud().catch(() => {});
-    }, 4000);
+    doSync();
+    const interval = setInterval(doSync, 4000);
 
     const handleUpdate = () => {
       setAdminInfo(getAdminContactInfo());
     };
+
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        doSync();
+      }
+    };
+
+    window.addEventListener(CLINICS_UPDATED_EVENT, handleUpdate);
     window.addEventListener('clinic_care_admin_contact_updated_v2', handleUpdate);
     window.addEventListener('storage', handleUpdate);
+    window.addEventListener('focus', doSync);
+    document.addEventListener('visibilitychange', handleVisibility);
+
     return () => {
       clearInterval(interval);
+      window.removeEventListener(CLINICS_UPDATED_EVENT, handleUpdate);
       window.removeEventListener('clinic_care_admin_contact_updated_v2', handleUpdate);
       window.removeEventListener('storage', handleUpdate);
+      window.removeEventListener('focus', doSync);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, []);
 
