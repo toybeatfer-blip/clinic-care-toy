@@ -198,25 +198,25 @@ export function pullClinicsFromCloud(): Promise<{ success: boolean; count: numbe
         if (d.adminContact && typeof d.adminContact === 'object') candidateAdminContacts.push(d.adminContact);
       }
 
-      const deletedIds = getDeletedClinicIds();
+      // Recopilar tombstones unificados de todas las fuentes (Local, Render y GitHub)
+      const localDeleted = getDeletedClinicIds();
+      const renderDeleted = (renderRes.status === 'fulfilled' && Array.isArray(renderRes.value?.deletedClinicIds))
+        ? renderRes.value.deletedClinicIds
+        : [];
+      const ghDeleted = (ghRes.status === 'fulfilled' && Array.isArray(ghRes.value?.deletedClinicIds))
+        ? ghRes.value.deletedClinicIds
+        : [];
 
-      // CRÍTICO: Cualquier consultorio presente en cualquiera de las nubes ESTÁ ACTIVO.
-      // Purgar inmediatamente cualquier tombstone obsoleto de deletedIds.
-      candidateLists.forEach(list => {
-        list.forEach(c => {
-          if (c && c.id) {
-            deletedIds.delete(c.id);
-            removeDeletedClinicId(c.id);
-          }
-        });
-      });
+      const deletedIds = new Set<string>([...localDeleted, ...renderDeleted, ...ghDeleted]);
+      // Persistir el conjunto completo de consultorios eliminados en el dispositivo
+      deletedIds.forEach(id => addDeletedClinicId(id));
 
-      // 1. Fusionar fuentes remotas
+      // 1. Fusionar fuentes remotas ignorando estrictamente los eliminados
       const remoteMergedMap = new Map<string, ClinicAccount>();
 
       candidateLists.forEach(list => {
         list.forEach(rawR => {
-          if (!rawR || !rawR.id) return;
+          if (!rawR || !rawR.id || deletedIds.has(rawR.id)) return;
           const r: ClinicAccount = {
             ...rawR,
             clinicName: cleanMojibake(rawR.clinicName) || 'Consultorio Médico',
@@ -326,6 +326,9 @@ export function pullClinicsFromCloud(): Promise<{ success: boolean; count: numbe
           mergedRecordsMap[cId] = Array.from(recMap.values());
         }
       });
+      deletedIds.forEach(dId => {
+        delete mergedRecordsMap[dId];
+      });
       saveAllClinicRecordsMap(mergedRecordsMap);
 
       // 4. Fusionar configuraciones de consultorios
@@ -338,6 +341,9 @@ export function pullClinicsFromCloud(): Promise<{ success: boolean; count: numbe
             mergedSettingsMap[cId] = { ...(mergedSettingsMap[cId] || {}), ...settings };
           }
         }
+      });
+      deletedIds.forEach(dId => {
+        delete mergedSettingsMap[dId];
       });
       saveAllClinicSettingsMap(mergedSettingsMap);
 
@@ -391,16 +397,8 @@ export function pushClinicsToCloud(clinicsToUpload?: ClinicAccount[], maxRetries
       const list = clinicsToUpload || getAllClinics();
       const deletedIds = getDeletedClinicIds();
 
-      // Desarmar cualquier tombstone para consultorios que se están guardando/subiendo
-      list.forEach(c => {
-        if (c && c.id && deletedIds.has(c.id)) {
-          deletedIds.delete(c.id);
-          removeDeletedClinicId(c.id);
-        }
-      });
-
       const cleanList = list
-        .filter(c => !deletedIds.has(c.id))
+        .filter(c => c && c.id && !deletedIds.has(c.id))
         .map(c => ({
           ...c,
           clinicName: cleanMojibake(c.clinicName) || 'Consultorio Médico',
@@ -419,6 +417,10 @@ export function pushClinicsToCloud(clinicsToUpload?: ClinicAccount[], maxRetries
       const adminContact = getAdminContactInfo();
       const clinicRecords = getAllClinicRecordsMap();
       const clinicSettings = getAllClinicSettingsMap();
+      deletedIds.forEach(dId => {
+        delete clinicRecords[dId];
+        delete clinicSettings[dId];
+      });
       const token = getAuthToken();
 
       // Guardar en respaldo local y en IndexedDB
@@ -575,6 +577,9 @@ export function pushClinicsToCloud(clinicsToUpload?: ClinicAccount[], maxRetries
 
           // 3. FUSIÓN DISTRIBUIDA DE EXPEDIENTES CLÍNICOS (PACIENTES)
           const mergedClinicRecords: { [clinicId: string]: any[] } = { ...remoteClinicRecords };
+          deletedIds.forEach(dId => {
+            delete mergedClinicRecords[dId];
+          });
           for (const [cId, localRecs] of Object.entries(clinicRecords)) {
             if (deletedIds.has(cId) || !Array.isArray(localRecs)) continue;
             const existingRecs = Array.isArray(mergedClinicRecords[cId]) ? mergedClinicRecords[cId] : [];
@@ -598,6 +603,9 @@ export function pushClinicsToCloud(clinicsToUpload?: ClinicAccount[], maxRetries
 
           // 4. FUSIÓN DISTRIBUIDA DE CONFIGURACIONES DE CONSULTORIO
           const mergedClinicSettings: { [clinicId: string]: any } = { ...remoteClinicSettings };
+          deletedIds.forEach(dId => {
+            delete mergedClinicSettings[dId];
+          });
           for (const [cId, localSet] of Object.entries(clinicSettings)) {
             if (deletedIds.has(cId) || !localSet) continue;
             mergedClinicSettings[cId] = { ...(mergedClinicSettings[cId] || {}), ...localSet };
@@ -609,12 +617,7 @@ export function pushClinicsToCloud(clinicsToUpload?: ClinicAccount[], maxRetries
             saveAdminContactInfo(adminContactToCommit, false);
           }
 
-          // Desarmar cualquier tombstone para consultorios presentes en clinicsToCommit
           const activeCommitIds = new Set(clinicsToCommit.map(c => c.id));
-          activeCommitIds.forEach(id => {
-            deletedIds.delete(id);
-            removeDeletedClinicId(id);
-          });
           const safeDeletedIdsForCommit = Array.from(deletedIds).filter(id => !activeCommitIds.has(id));
 
           const payload = {

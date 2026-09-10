@@ -8,6 +8,7 @@ import {
   idbSaveClinicSettings,
   idbGetClinicSettings,
   idbSaveSnapshot,
+  idbDeleteClinic,
   requestPersistentStorage
 } from './indexedDBStorage';
 
@@ -436,14 +437,7 @@ export function getAllClinics(): ClinicAccount[] {
 export function saveAllClinics(clinics: ClinicAccount[], syncToCloud: boolean = true): void {
   try {
     const deletedIds = getDeletedClinicIds();
-    // Si una clínica viene en la lista de guardado, está viva: desarmar cualquier tombstone obsoleto
-    clinics.forEach(c => {
-      if (c && c.id && deletedIds.has(c.id)) {
-        deletedIds.delete(c.id);
-        removeDeletedClinicId(c.id);
-      }
-    });
-    const cleanList = clinics.filter(c => !deletedIds.has(c.id));
+    const cleanList = clinics.filter(c => c && c.id && !deletedIds.has(c.id));
     
     // Guardar en almacenamiento principal y en bóveda redundante
     localStorage.setItem(MASTER_CLINICS_KEY, JSON.stringify(cleanList));
@@ -560,20 +554,83 @@ export function updateClinic(clinicId: string, updates: Partial<ClinicAccount>):
 }
 
 export function deleteClinic(clinicId: string): ClinicAccount[] {
+  // 1. Registrar inmediatamente en el conjunto de eliminados persistente
   addDeletedClinicId(clinicId);
-  const clinics = getAllClinics();
-  const filtered = clinics.filter(c => c.id !== clinicId);
-  saveAllClinics(filtered, true);
+  const deletedIds = getDeletedClinicIds();
 
+  // 2. Filtrar lista de consultorios activos
+  const clinics = getAllClinics();
+  const filtered = clinics.filter(c => c.id !== clinicId && !deletedIds.has(c.id));
+
+  // 3. Purgar almacenamiento local inmediatamente
   try {
+    localStorage.setItem(MASTER_CLINICS_KEY, JSON.stringify(filtered));
+    localStorage.setItem(VAULT_BACKUP_KEY, JSON.stringify(filtered));
+
+    // Purgar de snapshots de respaldo para evitar resurrecciones
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('clinic_care_snapshot_')) {
+        try {
+          const raw = localStorage.getItem(k);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              const cleaned = parsed.filter((c: any) => c && c.id !== clinicId);
+              localStorage.setItem(k, JSON.stringify(cleaned));
+            }
+          }
+        } catch (e) {}
+      }
+    }
+
+    // Purgar de claves históricas legacy
+    const legacyKeys = ['clinic_care_clinics_master_v1', 'clinic_care_clinics_master', 'clinics_master_v1'];
+    legacyKeys.forEach(k => {
+      try {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            const cleaned = parsed.filter((c: any) => c && c.id !== clinicId);
+            localStorage.setItem(k, JSON.stringify(cleaned));
+          }
+        }
+      } catch (e) {}
+    });
+
+    // Purgar claves individuales de expedientes y configuraciones (v2 y legacy)
     localStorage.removeItem(`clinic_care_records_clinic_${clinicId}_v2`);
+    localStorage.removeItem(`clinic_care_records_clinic_${clinicId}`);
     localStorage.removeItem(`clinic_care_settings_clinic_${clinicId}_v2`);
+    localStorage.removeItem(`clinic_care_settings_clinic_${clinicId}`);
     localStorage.removeItem(`clinic_care_active_record_clinic_${clinicId}_v2`);
+    localStorage.removeItem(`clinic_care_active_record_clinic_${clinicId}`);
     localStorage.removeItem(`clinic_care_backup_records_${clinicId}_v2`);
+    localStorage.removeItem(`clinic_care_backup_records_${clinicId}`);
   } catch (e) {
     console.error('Error deleting clinic DB', e);
   }
 
+  // 4. Purgar de IndexedDB
+  idbDeleteClinic(clinicId).catch(() => {});
+  idbSaveClinics(filtered).catch(() => {});
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(CLINICS_UPDATED_EVENT, { detail: filtered }));
+  }
+
+  // 5. Sincronizar de inmediato a la nube
+  pushClinicsToCloud(filtered).catch(() => {});
+
+  return filtered;
+}
+
+export async function deleteClinicAsync(clinicId: string): Promise<ClinicAccount[]> {
+  const filtered = deleteClinic(clinicId);
+  try {
+    await pushClinicsToCloud(filtered);
+  } catch (e) {}
   return filtered;
 }
 
@@ -942,10 +999,11 @@ export function deleteClinicRecord(clinicId: string, recordId: string): Clinical
 
 export function getAllClinicRecordsMap(): { [clinicId: string]: ClinicalRecord[] } {
   try {
+    const deletedIds = getDeletedClinicIds();
     const map: { [clinicId: string]: ClinicalRecord[] } = {};
     const clinics = getAllClinics();
     clinics.forEach(c => {
-      if (c && c.id) {
+      if (c && c.id && !deletedIds.has(c.id)) {
         const recs = getClinicRecords(c.id);
         if (recs && recs.length > 0) {
           map[c.id] = recs;
@@ -958,7 +1016,7 @@ export function getAllClinicRecordsMap(): { [clinicId: string]: ClinicalRecord[]
         const key = localStorage.key(i);
         if (key && key.startsWith('clinic_care_records_clinic_') && key.endsWith('_v2')) {
           const cId = key.replace('clinic_care_records_clinic_', '').replace('_v2', '');
-          if (cId && !map[cId]) {
+          if (cId && !deletedIds.has(cId) && !map[cId]) {
             const recs = getClinicRecords(cId);
             if (recs && recs.length > 0) {
               map[cId] = recs;
@@ -1097,10 +1155,11 @@ export function saveClinicSettings(clinicId: string, settings: DoctorSettings): 
 
 export function getAllClinicSettingsMap(): { [clinicId: string]: DoctorSettings } {
   try {
+    const deletedIds = getDeletedClinicIds();
     const map: { [clinicId: string]: DoctorSettings } = {};
     const clinics = getAllClinics();
     clinics.forEach(c => {
-      if (c && c.id) {
+      if (c && c.id && !deletedIds.has(c.id)) {
         map[c.id] = getClinicSettings(c.id);
       }
     });
@@ -1110,7 +1169,7 @@ export function getAllClinicSettingsMap(): { [clinicId: string]: DoctorSettings 
         const key = localStorage.key(i);
         if (key && key.startsWith('clinic_care_settings_clinic_') && key.endsWith('_v2')) {
           const cId = key.replace('clinic_care_settings_clinic_', '').replace('_v2', '');
-          if (cId && !map[cId]) {
+          if (cId && !deletedIds.has(cId) && !map[cId]) {
             map[cId] = getClinicSettings(cId);
           }
         }

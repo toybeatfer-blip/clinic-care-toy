@@ -203,3 +203,40 @@ export async function idbGetLatestSnapshot(): Promise<any | null> {
     return null;
   }
 }
+
+// 5. Eliminar completamente un consultorio, sus expedientes y configuraciones de IndexedDB
+export async function idbDeleteClinic(clinicId: string): Promise<void> {
+  try {
+    const db = await getIDB();
+
+    // Eliminar de clinics
+    try {
+      const txClinics = db.transaction('clinics', 'readwrite');
+      txClinics.objectStore('clinics').delete(clinicId);
+    } catch (e) {}
+
+    // Eliminar de settings
+    try {
+      const txSettings = db.transaction('settings', 'readwrite');
+      txSettings.objectStore('settings').delete(clinicId);
+    } catch (e) {}
+
+    // Eliminar de records buscando por clinicId
+    try {
+      const txRecords = db.transaction('records', 'readwrite');
+      const recordStore = txRecords.objectStore('records');
+      const index = recordStore.index('clinicId');
+      const req = index.openCursor(IDBKeyRange.only(clinicId));
+      req.onsuccess = (event: any) => {
+        const cursor = event.target.result;
+        if (cursor) {
+          cursor.delete();
+          cursor.continue();
+        }
+      };
+    } catch (e) {}
+  } catch (e) {
+    console.warn('Error deleting clinic from IndexedDB:', e);
+  }
+}
+

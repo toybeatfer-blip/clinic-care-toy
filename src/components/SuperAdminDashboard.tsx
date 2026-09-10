@@ -30,6 +30,7 @@ import {
   getAllClinics,
   setClinicLicense,
   deleteClinic,
+  deleteClinicAsync,
   saveAllClinics,
   getClinicRecords,
   renewClinicLicense,
@@ -66,6 +67,8 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [adminContact, setAdminContact] = useState<AdminContactInfo>(() => getAdminContactInfo());
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const isDeletingRef = useRef(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(() => getLastCloudSyncTime());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -110,8 +113,9 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
 
     // 2. Intervalo de actualización en la nube ultra-rápido cada 4 segundos (100% automático)
     const syncInterval = setInterval(() => {
+      if (isDeletingRef.current) return;
       pullClinicsFromCloud().then(res => {
-        if (res.success) {
+        if (res.success && !isDeletingRef.current) {
           setClinics(getAllClinics());
           setAdminContact(getAdminContactInfo());
           setLastSyncTime(getLastCloudSyncTime());
@@ -164,10 +168,25 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
     setClinics(updated);
   };
 
-  const handleDeleteClinic = (clinic: ClinicAccount) => {
-    if (window.confirm(`¿Estás SEGURO de eliminar definitivamente el consultorio "${clinic.clinicName}" del médico ${clinic.doctorName}? Esta acción borrará permanentemente su base de datos de pacientes.`)) {
-      const updated = deleteClinic(clinic.id);
+  const handleDeleteClinic = async (clinic: ClinicAccount) => {
+    if (!window.confirm(`¿Estás SEGURO de eliminar definitivamente el consultorio "${clinic.clinicName}" del médico ${clinic.doctorName}?\n\nEsta acción borrará permanentemente su base de datos de pacientes y configuraciones de la nube y de todos tus dispositivos.`)) {
+      return;
+    }
+    setDeletingId(clinic.id);
+    isDeletingRef.current = true;
+    setIsRefreshing(true);
+    try {
+      const updated = await deleteClinicAsync(clinic.id);
       setClinics(updated);
+      setLastSyncTime(getLastCloudSyncTime());
+    } catch (err: any) {
+      alert('Error al eliminar consultorio: ' + (err?.message || 'Error de red'));
+    } finally {
+      setTimeout(() => {
+        isDeletingRef.current = false;
+        setDeletingId(null);
+        setIsRefreshing(false);
+      }, 500);
     }
   };
 
@@ -663,10 +682,15 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onLogo
                             <button
                               type="button"
                               onClick={() => handleDeleteClinic(c)}
-                              className="p-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 transition-all"
+                              disabled={deletingId === c.id}
+                              className="p-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 transition-all disabled:opacity-50"
                               title="Eliminar consultorio permanentemente"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              {deletingId === c.id ? (
+                                <RefreshCw className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-4 h-4" />
+                              )}
                             </button>
 
                           </div>

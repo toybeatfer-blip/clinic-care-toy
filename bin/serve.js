@@ -143,14 +143,17 @@ async function syncDatabaseWithGitHub() {
     }
 
     if (cloudData && Array.isArray(cloudData.clinics)) {
+      const ghDeletedSet = new Set(Array.isArray(cloudData.deletedClinicIds) ? cloudData.deletedClinicIds : []);
+      const allDeletedSet = new Set([...(masterDb.deletedClinicIds || []), ...ghDeletedSet]);
+
       const currentMap = new Map();
       masterDb.clinics.forEach(c => {
-        if (c && c.id) currentMap.set(c.id, c);
+        if (c && c.id && !allDeletedSet.has(c.id)) currentMap.set(c.id, c);
       });
 
-      // Incorporar consultorios de GitHub
+      // Incorporar consultorios de GitHub sólo si NO han sido eliminados
       cloudData.clinics.forEach(ghClinic => {
-        if (!ghClinic || !ghClinic.id) return;
+        if (!ghClinic || !ghClinic.id || allDeletedSet.has(ghClinic.id)) return;
         let matchId = null;
         if (currentMap.has(ghClinic.id)) {
           matchId = ghClinic.id;
@@ -176,10 +179,14 @@ async function syncDatabaseWithGitHub() {
       });
 
       masterDb.clinics = Array.from(currentMap.values());
-
-      // Purgar de deletedClinicIds cualquier consultorio activo
       const activeIds = new Set(masterDb.clinics.map(c => c.id));
-      masterDb.deletedClinicIds = (masterDb.deletedClinicIds || []).filter(id => !activeIds.has(id));
+      masterDb.deletedClinicIds = Array.from(allDeletedSet).filter(id => !activeIds.has(id));
+
+      // Purgar de inmediato expedientes y configuraciones de consultorios eliminados
+      allDeletedSet.forEach(dId => {
+        if (masterDb.clinicRecords) delete masterDb.clinicRecords[dId];
+        if (masterDb.clinicSettings) delete masterDb.clinicSettings[dId];
+      });
 
       // Sincronizar admin contact
       if (cloudData.adminContact) {
@@ -365,22 +372,18 @@ const requestHandler = (req, res) => {
     req.on('end', () => {
       try {
         const payload = JSON.parse(bodyData || '{}');
-        const deletedSet = new Set([...masterDb.deletedClinicIds, ...(payload.deletedClinicIds || [])]);
+        const incomingDeleted = Array.isArray(payload.deletedClinicIds) ? payload.deletedClinicIds : [];
+        const deletedSet = new Set([...masterDb.deletedClinicIds, ...incomingDeleted]);
 
-        // 1. Fusionar Consultorios
-        if (Array.isArray(payload.clinics) && payload.clinics.length > 0) {
-          // Desarmar cualquier tombstone para consultorios entrantes activos
-          payload.clinics.forEach(c => {
-            if (c && c.id) deletedSet.delete(c.id);
-          });
-
+        // 1. Fusionar Consultorios (respetando estrictamente los eliminados)
+        if (Array.isArray(payload.clinics)) {
           const clinicMap = new Map();
           masterDb.clinics.forEach(c => {
             if (c && c.id && !deletedSet.has(c.id)) clinicMap.set(c.id, c);
           });
 
           payload.clinics.forEach(incoming => {
-            if (!incoming || !incoming.id) return;
+            if (!incoming || !incoming.id || deletedSet.has(incoming.id)) return;
 
             // Buscar si ya existe por ID o por username
             let matchId = null;
@@ -455,6 +458,11 @@ const requestHandler = (req, res) => {
             }
           }
         }
+
+        deletedSet.forEach(dId => {
+          if (masterDb.clinicRecords) delete masterDb.clinicRecords[dId];
+          if (masterDb.clinicSettings) delete masterDb.clinicSettings[dId];
+        });
 
         const activeIds = new Set(masterDb.clinics.map(c => c.id));
         masterDb.deletedClinicIds = Array.from(deletedSet).filter(id => !activeIds.has(id));
