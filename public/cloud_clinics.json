@@ -1,6 +1,6 @@
 {
   "superAdmin": "Fernando01",
-  "updatedAt": "2026-09-10T04:52:49.995Z",
+  "updatedAt": "2026-09-10T04:59:23.392Z",
   "adminContact": {
     "adminName": "Fernando (Super Administrador)",
     "phoneWhatsApp": "+52 474 1539891",
@@ -54,29 +54,6 @@
       "lastLoginAt": "2026-09-10T04:40:18.035Z",
       "licenseStatus": "active",
       "licenseValidUntil": "Indefinida"
-    },
-    {
-      "id": "45b62020-0d1b-4fe8-9a82-0c18076edd1f",
-      "clinicName": "Ndjdkdksl",
-      "username": "consultorio_45b620",
-      "passwordPlain": "1234",
-      "doctorName": "Jose",
-      "prefix": "Dr.",
-      "cedulaGeneral": "618382",
-      "cedulaEspecialidad": "",
-      "especialidad": "Medicina General",
-      "universidad": "",
-      "telefono": "",
-      "correo": "",
-      "direccion": "",
-      "sucursal": "Centro",
-      "logoUrl": "",
-      "primaryColor": "sky",
-      "createdAt": "2026-09-10T04:40:55.019Z",
-      "updatedAt": "2026-09-10T04:40:55.019Z",
-      "lastLoginAt": "2026-09-10T04:40:55.019Z",
-      "licenseStatus": "active",
-      "licenseValidUntil": "Indefinida"
     }
   ],
   "deletedClinicIds": [
@@ -90,7 +67,8 @@
     "940b3587-a27c-4a52-9d16-765a3d341cf1",
     "241e3318-5acb-4f3c-a433-12e03858c87c",
     "0c0235f1-6632-4ae0-8e1a-454dbe5667bd",
-    "0d55d493-aa36-4d8c-9d6c-354ada5c0d70"
+    "0d55d493-aa36-4d8c-9d6c-354ada5c0d70",
+    "45b62020-0d1b-4fe8-9a82-0c18076edd1f"
   ],
   "clinicRecords": {
     "clinic_dra_rivas_1788492799904": [
@@ -243,22 +221,6 @@
       "sucursal": "Matriz Principal",
       "direccionClinica": "Av. Insurgentes Sur 1234, Ciudad de México",
       "telefonoClinica": "55 1234 5678",
-      "logoUrl": "",
-      "primaryColor": "sky"
-    },
-    "45b62020-0d1b-4fe8-9a82-0c18076edd1f": {
-      "doctorName": "Jose",
-      "prefix": "Dr.",
-      "cedulaGeneral": "618382",
-      "cedulaEspecialidad": "",
-      "especialidad": "Medicina General",
-      "universidad": "",
-      "telefonoContacto": "",
-      "correoContacto": "",
-      "nombreClinica": "Ndjdkdksl",
-      "sucursal": "Centro",
-      "direccionClinica": "",
-      "telefonoClinica": "",
       "logoUrl": "",
       "primaryColor": "sky"
     }
