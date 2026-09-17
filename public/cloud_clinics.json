@@ -1,6 +1,6 @@
 {
   "superAdmin": "Fernando01",
-  "updatedAt": "2026-09-10T04:59:24.480Z",
+  "updatedAt": "2026-09-17T21:20:38.362Z",
   "adminContact": {
     "adminName": "Fernando (Super Administrador)",
     "phoneWhatsApp": "+52 474 1539891",
@@ -9,29 +9,6 @@
     "updatedAt": "2026-09-04T23:33:42.713Z"
   },
   "clinics": [
-    {
-      "id": "clinic_dra_rivas_1788492799904",
-      "clinicName": "Consultorio Médico",
-      "username": "dra.rivas",
-      "passwordPlain": "1234",
-      "doctorName": "Médico Responsable",
-      "prefix": "Dra.",
-      "cedulaGeneral": "632782",
-      "cedulaEspecialidad": "",
-      "especialidad": "Medicina General",
-      "universidad": "",
-      "telefono": "",
-      "correo": "",
-      "direccion": "",
-      "sucursal": "",
-      "logoUrl": "",
-      "primaryColor": "sky",
-      "createdAt": "2026-09-04T03:33:19.904Z",
-      "updatedAt": "2026-09-05T01:10:33.067Z",
-      "lastLoginAt": "2026-09-04T03:33:19.905Z",
-      "licenseStatus": "active",
-      "licenseValidUntil": "2026-10-05"
-    },
     {
       "id": "clinic_seed_central_01",
       "clinicName": "Clínica Médica Familiar y Especialidades",
@@ -54,6 +31,29 @@
       "lastLoginAt": "2026-09-10T04:40:18.035Z",
       "licenseStatus": "active",
       "licenseValidUntil": "Indefinida"
+    },
+    {
+      "id": "clinic_dra_rivas_1788492799904",
+      "clinicName": "Consultorio Médico",
+      "doctorName": "Médico Responsable",
+      "prefix": "Dra.",
+      "cedulaGeneral": "632782",
+      "cedulaEspecialidad": "",
+      "especialidad": "Medicina General",
+      "universidad": "",
+      "username": "dra.rivas",
+      "passwordPlain": "1234",
+      "telefono": "",
+      "correo": "",
+      "direccion": "",
+      "sucursal": "",
+      "logoUrl": "",
+      "primaryColor": "sky",
+      "licenseStatus": "active",
+      "licenseValidUntil": "2026-10-05",
+      "createdAt": "2026-09-04T03:33:19.904Z",
+      "updatedAt": "2026-09-05T01:10:33.067Z",
+      "lastLoginAt": "2026-09-04T03:33:19.905Z"
     }
   ],
   "deletedClinicIds": [

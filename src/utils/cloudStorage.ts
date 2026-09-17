@@ -553,7 +553,7 @@ export function pushClinicsToCloud(clinicsToUpload?: ClinicAccount[], maxRetries
                 matchKey = l.id;
               } else {
                 for (const [k, v] of mergedUploadMap.entries()) {
-                  if (v.username.toLowerCase() === l.username.toLowerCase()) {
+                  if ((v.username || '').toLowerCase() === (l.username || '').toLowerCase()) {
                     matchKey = k;
                     break;
                   }

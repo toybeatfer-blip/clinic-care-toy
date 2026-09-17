@@ -18,9 +18,9 @@ import {
   MessageCircle,
   Clock
 } from 'lucide-react';
-import { authenticateUser, registerClinic, getAdminContactInfo, CLINICS_UPDATED_EVENT } from '../utils/authStorage';
+import { authenticateUser, registerClinic, getAdminContactInfo, getAllClinics, CLINICS_UPDATED_EVENT } from '../utils/authStorage';
 import { pullClinicsFromCloud, pushClinicsToCloud } from '../utils/cloudStorage';
-import { SessionUser } from '../types';
+import { SessionUser, ClinicAccount } from '../types';
 import { SuspendedLicenseNoticeModal } from './SuspendedLicenseNoticeModal';
 import { CREATOR_LOGO_BASE64 } from '../constants/creatorBranding';
 
@@ -59,12 +59,14 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   const [isSuspendedState, setIsSuspendedState] = useState(false);
 
   const [adminInfo, setAdminInfo] = useState(getAdminContactInfo());
+  const [availableClinics, setAvailableClinics] = useState<ClinicAccount[]>(() => getAllClinics());
 
   // Sincronización automática con la nube al abrir la pantalla y en tiempo real
   useEffect(() => {
     const doSync = () => {
       pullClinicsFromCloud().then(() => {
         setAdminInfo(getAdminContactInfo());
+        setAvailableClinics(getAllClinics());
       }).catch(() => {});
     };
 
@@ -73,6 +75,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
 
     const handleUpdate = () => {
       setAdminInfo(getAdminContactInfo());
+      setAvailableClinics(getAllClinics());
     };
 
     const handleVisibility = () => {
@@ -317,6 +320,52 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                 />
               </div>
             </div>
+
+            {/* Directorio Visual de Consultorios Registrados */}
+            {availableClinics.length > 0 && (
+              <div className="space-y-2 pt-2 border-t border-slate-200/80 dark:border-slate-800">
+                <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                  <span className="font-semibold flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+                    <Building2 className="w-3.5 h-3.5 text-sky-500" />
+                    <span>Consultorios Registrados ({availableClinics.length}):</span>
+                  </span>
+                  <span className="text-[10px] text-slate-400">Clic para autocompletar</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                  {availableClinics.map((c) => {
+                    const isSelected = loginUser.toLowerCase() === (c.username || '').toLowerCase();
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => {
+                          setLoginUser(c.username);
+                          if (c.passwordPlain) setLoginPass(c.passwordPlain);
+                        }}
+                        className={`text-left p-2.5 rounded-xl border transition-all flex flex-col justify-between ${
+                          isSelected
+                            ? 'bg-sky-50 dark:bg-sky-950/60 border-sky-400 dark:border-sky-500 shadow-sm ring-1 ring-sky-400'
+                            : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700/80 hover:border-sky-300 dark:hover:border-sky-600'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="font-bold text-xs text-slate-800 dark:text-slate-100 truncate">
+                            {c.clinicName}
+                          </span>
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-sky-100 dark:bg-sky-900/60 text-sky-700 dark:text-sky-300 shrink-0">
+                            {c.username}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center justify-between">
+                          <span className="truncate">{c.prefix} {c.doctorName}</span>
+                          {c.sucursal && <span className="text-[10px] text-slate-400 shrink-0">• {c.sucursal}</span>}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             <button
               type="submit"

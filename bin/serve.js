@@ -15,6 +15,13 @@ if (!fs.existsSync(dataDir)) {
   try { fs.mkdirSync(dataDir, { recursive: true }); } catch (e) {}
 }
 
+process.on('uncaughtException', (err) => {
+  console.error('[UNCAUGHT-EXCEPTION]', err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[UNHANDLED-REJECTION]', reason);
+});
+
 // Configuración de GitHub Cloud Vault para sincronización bidireccional automática del servidor
 const REPO_OWNER = 'toybeatfer-blip';
 const REPO_NAME = 'clinic-care-toy';
@@ -226,7 +233,7 @@ async function syncDatabaseWithGitHub() {
         }
       }
 
-      saveDatabase();
+      saveDatabase(false);
       console.log(`[SYNC-OK] Sincronizado con GitHub Cloud Vault: ${masterDb.clinics.length} consultorios activos.`);
     }
   } catch (err) {
@@ -242,7 +249,88 @@ setInterval(() => {
   syncDatabaseWithGitHub().catch(() => {});
 }, 45000);
 
-function saveDatabase() {
+let isPushingToGitHub = false;
+let pendingGitHubPush = false;
+let pushGitHubDebounceTimer = null;
+
+async function pushDatabaseToGitHub() {
+  if (isPushingToGitHub) {
+    pendingGitHubPush = true;
+    return;
+  }
+  isPushingToGitHub = true;
+  try {
+    const token = getAuthToken();
+    let currentSha = null;
+
+    try {
+      const shaRes = await fetch(`${GH_API_URL}?_t=${Date.now()}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'ClinicCareServer'
+        }
+      });
+      if (shaRes.ok) {
+        const json = await shaRes.json();
+        if (json && json.sha) currentSha = json.sha;
+      }
+    } catch (e) {}
+
+    const payload = {
+      superAdmin: masterDb.superAdmin,
+      updatedAt: masterDb.updatedAt || new Date().toISOString(),
+      adminContact: masterDb.adminContact,
+      clinics: masterDb.clinics,
+      deletedClinicIds: masterDb.deletedClinicIds,
+      clinicRecords: masterDb.clinicRecords,
+      clinicSettings: masterDb.clinicSettings
+    };
+
+    const jsonStr = JSON.stringify(payload, null, 2);
+    const base64Content = Buffer.from(jsonStr, 'utf8').toString('base64');
+
+    const putBody = {
+      message: `feat: Server real-time backup sync (${masterDb.clinics.length} clinics)`,
+      content: base64Content
+    };
+    if (currentSha) putBody.sha = currentSha;
+
+    const putRes = await fetch(GH_API_URL, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json',
+        'User-Agent': 'ClinicCareServer'
+      },
+      body: JSON.stringify(putBody)
+    });
+
+    if (putRes.ok) {
+      console.log(`[GH-PUSH-OK] Respaldo permanente en GitHub actualizado: ${masterDb.clinics.length} consultorios.`);
+    } else {
+      console.warn(`[GH-PUSH-WARN] GitHub retornó estado ${putRes.status}`);
+    }
+  } catch (err) {
+    console.warn('[GH-PUSH-ERR] Error al respaldar en GitHub:', err.message);
+  } finally {
+    isPushingToGitHub = false;
+    if (pendingGitHubPush) {
+      pendingGitHubPush = false;
+      setTimeout(pushDatabaseToGitHub, 2000);
+    }
+  }
+}
+
+function debouncedPushToGitHub(delayMs = 2500) {
+  if (pushGitHubDebounceTimer) clearTimeout(pushGitHubDebounceTimer);
+  pushGitHubDebounceTimer = setTimeout(() => {
+    pushDatabaseToGitHub().catch(() => {});
+  }, delayMs);
+}
+
+function saveDatabase(syncToGitHub = true) {
   try {
     masterDb.updatedAt = new Date().toISOString();
     fs.writeFileSync(dbFilePath, JSON.stringify(masterDb, null, 2), 'utf8');
@@ -259,6 +347,10 @@ function saveDatabase() {
       };
       fs.writeFileSync(publicSeedPath, JSON.stringify(publicExport, null, 2), 'utf8');
     } catch (e) {}
+
+    if (syncToGitHub) {
+      debouncedPushToGitHub(2500);
+    }
   } catch (err) {
     console.error('Error saving master database:', err.message);
   }

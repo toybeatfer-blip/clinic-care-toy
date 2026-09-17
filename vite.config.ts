@@ -7,7 +7,14 @@ export default defineConfig({
   base: '/',
   server: {
     port: 3000,
-    open: false
+    open: false,
+    proxy: {
+      '/api': {
+        target: 'https://clinic-care-toy.onrender.com',
+        changeOrigin: true,
+        secure: false
+      }
+    }
   },
   preview: {
     port: 3000,
