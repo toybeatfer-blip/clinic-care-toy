@@ -1,6 +1,6 @@
 {
   "superAdmin": "Fernando01",
-  "updatedAt": "2026-10-22T01:18:36.829Z",
+  "updatedAt": "2026-10-22T01:18:08.226Z",
   "adminContact": {
     "adminName": "Fernando (Super Administrador)",
     "phoneWhatsApp": "+52 474 1539891",
@@ -8,31 +8,7 @@
     "helpMessage": "Para renovar tu licencia mensual o resolver dudas sobre tu cuenta de consultorio, comunícate directamente con el administrador del sistema.",
     "updatedAt": "2026-09-04T23:33:42.713Z"
   },
-  "clinics": [
-    {
-      "id": "clinic_seed_central_01",
-      "clinicName": "Clínica Médica Familiar y Especialidades",
-      "username": "consultorio_clinic",
-      "passwordPlain": "1234",
-      "doctorName": "Fernando Beltrán",
-      "prefix": "Dr.",
-      "cedulaGeneral": "12345678",
-      "cedulaEspecialidad": "ESP-987654",
-      "especialidad": "Medicina General y Familiar",
-      "universidad": "UNAM / Facultad de Medicina",
-      "telefono": "55 1234 5678",
-      "correo": "toybeatfer@gmail.com",
-      "direccion": "Av. Insurgentes Sur 1234, Ciudad de México",
-      "sucursal": "Matriz Principal",
-      "logoUrl": "",
-      "primaryColor": "sky",
-      "createdAt": "2026-09-10T04:40:18.035Z",
-      "updatedAt": "2026-09-10T04:40:18.035Z",
-      "lastLoginAt": "2026-09-10T04:40:18.035Z",
-      "licenseStatus": "active",
-      "licenseValidUntil": "Indefinida"
-    }
-  ],
+  "clinics": [],
   "deletedClinicIds": [
     "dc2ac156-f3c3-4ee4-93e7-9b725e00e300",
     "6b6ce601-ee73-4832-84f5-34282ed882b9",
@@ -46,25 +22,9 @@
     "0c0235f1-6632-4ae0-8e1a-454dbe5667bd",
     "0d55d493-aa36-4d8c-9d6c-354ada5c0d70",
     "45b62020-0d1b-4fe8-9a82-0c18076edd1f",
-    "clinic_dra_rivas_1788492799904"
+    "clinic_dra_rivas_1788492799904",
+    "clinic_seed_central_01"
   ],
   "clinicRecords": {},
-  "clinicSettings": {
-    "clinic_seed_central_01": {
-      "doctorName": "Fernando Beltrán",
-      "prefix": "Dr.",
-      "cedulaGeneral": "12345678",
-      "cedulaEspecialidad": "ESP-987654",
-      "especialidad": "Medicina General y Familiar",
-      "universidad": "UNAM / Facultad de Medicina",
-      "telefonoContacto": "55 1234 5678",
-      "correoContacto": "toybeatfer@gmail.com",
-      "nombreClinica": "Clínica Médica Familiar y Especialidades",
-      "sucursal": "Matriz Principal",
-      "direccionClinica": "Av. Insurgentes Sur 1234, Ciudad de México",
-      "telefonoClinica": "55 1234 5678",
-      "logoUrl": "",
-      "primaryColor": "sky"
-    }
-  }
+  "clinicSettings": {}
 }
