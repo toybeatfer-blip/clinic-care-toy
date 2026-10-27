@@ -1,6 +1,6 @@
 {
   "superAdmin": "Fernando01",
-  "updatedAt": "2026-10-27T22:55:58.455Z",
+  "updatedAt": "2026-10-27T22:56:00.002Z",
   "adminContact": {
     "adminName": "Fernando (Super Administrador)",
     "phoneWhatsApp": "+52 474 1539891",
@@ -63,7 +63,7 @@
         "id": "30335cf0-56f0-421b-9179-177f85397e1d",
         "ticketFolio": "",
         "createdAt": "2026-10-27T22:55:01.107Z",
-        "updatedAt": "2026-10-27T22:55:57.991Z",
+        "updatedAt": "2026-10-27T22:55:59.484Z",
         "activeModule": "modulo1",
         "identification": {
           "nombres": "",
