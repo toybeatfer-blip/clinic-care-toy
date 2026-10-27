@@ -1,6 +1,6 @@
 {
   "superAdmin": "Fernando01",
-  "updatedAt": "2026-10-27T18:18:54.015Z",
+  "updatedAt": "2026-10-27T18:18:55.572Z",
   "adminContact": {
     "adminName": "Fernando (Super Administrador)",
     "phoneWhatsApp": "+52 474 1539891",
@@ -31,29 +31,6 @@
       "lastLoginAt": "2026-09-04T03:33:19.905Z",
       "licenseStatus": "expired",
       "licenseValidUntil": "2026-10-05"
-    },
-    {
-      "id": "45b62020-0d1b-4fe8-9a82-0c18076edd1f",
-      "clinicName": "Ndjdkdksl",
-      "username": "consultorio_45b620",
-      "passwordPlain": "1234",
-      "doctorName": "Jose",
-      "prefix": "Dr.",
-      "cedulaGeneral": "618382",
-      "cedulaEspecialidad": "",
-      "especialidad": "Medicina General",
-      "universidad": "",
-      "telefono": "",
-      "correo": "",
-      "direccion": "",
-      "sucursal": "Centro",
-      "logoUrl": "",
-      "primaryColor": "sky",
-      "createdAt": "2026-09-10T04:40:55.019Z",
-      "updatedAt": "2026-09-10T04:40:55.019Z",
-      "lastLoginAt": "2026-09-10T04:40:55.019Z",
-      "licenseStatus": "active",
-      "licenseValidUntil": "Indefinida"
     }
   ],
   "deletedClinicIds": [
@@ -65,7 +42,8 @@
     "241e3318-5acb-4f3c-a433-12e03858c87c",
     "0c0235f1-6632-4ae0-8e1a-454dbe5667bd",
     "6b6ce601-ee73-4832-84f5-34282ed882b9",
-    "clinic_seed_central_01"
+    "clinic_seed_central_01",
+    "45b62020-0d1b-4fe8-9a82-0c18076edd1f"
   ],
   "clinicRecords": {
     "clinic_dra_rivas_1788492799904": [
@@ -200,22 +178,6 @@
       "correoContacto": "",
       "nombreClinica": "Consultorio Médico",
       "sucursal": "",
-      "direccionClinica": "",
-      "telefonoClinica": "",
-      "logoUrl": "",
-      "primaryColor": "sky"
-    },
-    "45b62020-0d1b-4fe8-9a82-0c18076edd1f": {
-      "doctorName": "Jose",
-      "prefix": "Dr.",
-      "cedulaGeneral": "618382",
-      "cedulaEspecialidad": "",
-      "especialidad": "Medicina General",
-      "universidad": "",
-      "telefonoContacto": "",
-      "correoContacto": "",
-      "nombreClinica": "Ndjdkdksl",
-      "sucursal": "Centro",
       "direccionClinica": "",
       "telefonoClinica": "",
       "logoUrl": "",
