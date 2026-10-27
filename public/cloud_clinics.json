@@ -1,6 +1,6 @@
 {
   "superAdmin": "Fernando01",
-  "updatedAt": "2026-10-27T22:55:01.664Z",
+  "updatedAt": "2026-10-27T22:55:03.563Z",
   "adminContact": {
     "adminName": "Fernando (Super Administrador)",
     "phoneWhatsApp": "+52 474 1539891",
@@ -31,10 +31,153 @@
       "lastLoginAt": "2026-10-27T22:55:01.104Z",
       "licenseStatus": "active",
       "licenseValidUntil": "Indefinida"
+    },
+    {
+      "id": "30335cf0-56f0-421b-9179-177f85397e1d",
+      "clinicName": "Consultorio Médico",
+      "username": "consultorio_30335c",
+      "passwordPlain": "1234",
+      "doctorName": "Médico Responsable",
+      "prefix": "Dr.",
+      "cedulaGeneral": "",
+      "cedulaEspecialidad": "",
+      "especialidad": "Medicina General",
+      "universidad": "",
+      "telefono": "",
+      "correo": "",
+      "direccion": "",
+      "sucursal": "",
+      "logoUrl": "",
+      "primaryColor": "sky",
+      "createdAt": "2026-10-27T22:55:02.728Z",
+      "updatedAt": "2026-10-27T22:55:02.728Z",
+      "lastLoginAt": "2026-10-27T22:55:02.728Z",
+      "licenseStatus": "active",
+      "licenseValidUntil": "Indefinida"
     }
   ],
   "deletedClinicIds": [],
-  "clinicRecords": {},
+  "clinicRecords": {
+    "clinic_seed_central_01": [
+      {
+        "id": "30335cf0-56f0-421b-9179-177f85397e1d",
+        "ticketFolio": "",
+        "createdAt": "2026-10-27T22:55:01.107Z",
+        "updatedAt": "2026-10-27T22:55:02.725Z",
+        "activeModule": "modulo1",
+        "identification": {
+          "nombres": "",
+          "apellidoPaterno": "",
+          "apellidoMaterno": "",
+          "fechaNacimiento": "",
+          "edad": "",
+          "sexo": "Masculino",
+          "estadoNacimiento": "",
+          "nacionalidad": "Mexicana",
+          "curp": "",
+          "rfc": "",
+          "codigoPostal": "",
+          "estado": "",
+          "municipio": "",
+          "localidad": "",
+          "colonia": "",
+          "calle": "",
+          "numeroExt": "",
+          "numeroInt": "",
+          "telefonoCelular": "",
+          "correoElectronico": "",
+          "antecedentesHeredofamiliares": "",
+          "antecedentesPersonalesPatologicos": "",
+          "farmacodependencias": "",
+          "tabaquismo": "",
+          "alcoholismo": "",
+          "alergias": "",
+          "inmunizaciones": ""
+        },
+        "historyCheckup": {
+          "padecimientoActual": "",
+          "interrogatorioAparatos": "",
+          "vitalSigns": {
+            "temp": "",
+            "taSistolica": "",
+            "taDiastolica": "",
+            "taPediatricaBadge": "",
+            "fc": "",
+            "fr": "",
+            "satO2": "",
+            "peso": "",
+            "talla": "",
+            "imc": "",
+            "glucosa": ""
+          },
+          "physicalExam": {
+            "habitusExterior": "",
+            "cabezaCuello": "",
+            "torax": "",
+            "abdomen": "",
+            "miembros": "",
+            "genitales": "Diferido"
+          },
+          "estudiosDiagnostico": {
+            "laboratorios": "",
+            "rayosX": "",
+            "ultrasonido": "",
+            "tomografiaTac": "",
+            "otrosEstudios": "",
+            "interpretacionHallazgos": ""
+          },
+          "diagnosticoCie10": "",
+          "diagnosticoSecundario": "",
+          "pronostico": "",
+          "indicacionTerapeutica": "",
+          "prescripcion": []
+        },
+        "evolutionNote": {
+          "diagnosticoSeguimiento": "",
+          "evolucionCuadroClinico": "",
+          "exploracionFisicaDirigida": "",
+          "estudiosDiagnostico": {
+            "laboratorios": "",
+            "rayosX": "",
+            "ultrasonido": "",
+            "tomografiaTac": "",
+            "otrosEstudios": "",
+            "interpretacionHallazgos": ""
+          },
+          "diagnosticoActualizado": "",
+          "planTerapeutico": "",
+          "vitalSigns": {
+            "temp": "",
+            "taSistolica": "",
+            "taDiastolica": "",
+            "taPediatricaBadge": "",
+            "fc": "",
+            "fr": "",
+            "satO2": "",
+            "peso": "",
+            "talla": "",
+            "imc": "",
+            "glucosa": ""
+          }
+        },
+        "procedure": {
+          "procedimientoRealizado": "",
+          "tipoProcedimiento": "Inyección Intramuscular",
+          "observacionesObligatorias": "",
+          "farmacoAdministrado": "",
+          "presentacionDosis": "",
+          "zonaAplicacion": "",
+          "leyendaTestigos": "Se cuenta con firma de consentimiento informado por paciente y testigo"
+        },
+        "clinicalImages": [],
+        "appointmentInfo": {
+          "nextDate": "",
+          "nextTime": "",
+          "notes": ""
+        }
+      }
+    ]
+  },
   "clinicSettings": {
     "clinic_seed_central_01": {
       "doctorName": "Fernando Beltrán",
@@ -49,6 +192,22 @@
       "sucursal": "Matriz Principal",
       "direccionClinica": "Av. Insurgentes Sur 1234, Ciudad de México",
       "telefonoClinica": "55 1234 5678",
+      "logoUrl": "",
+      "primaryColor": "sky"
+    },
+    "30335cf0-56f0-421b-9179-177f85397e1d": {
+      "doctorName": "Médico Responsable",
+      "prefix": "Dr.",
+      "cedulaGeneral": "",
+      "cedulaEspecialidad": "",
+      "especialidad": "Medicina General",
+      "universidad": "",
+      "telefonoContacto": "",
+      "correoContacto": "",
+      "nombreClinica": "Consultorio Médico",
+      "sucursal": "",
+      "direccionClinica": "",
+      "telefonoClinica": "",
       "logoUrl": "",
       "primaryColor": "sky"
     }
